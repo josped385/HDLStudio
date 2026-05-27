@@ -11,6 +11,8 @@ from ui.styles import MAIN_STYLE
 
 from core.project import Project
 
+from ui.actions import IDEActions
+
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -24,9 +26,11 @@ class MainWindow(QMainWindow):
 
         self.setStyleSheet(MAIN_STYLE)
 
-        self._setup_ui()
+        self.ide_actions = IDEActions(self)
 
         self.project = Project()
+
+        self._setup_ui()
 
     # ---------------- UI ----------------
 
@@ -43,14 +47,31 @@ class MainWindow(QMainWindow):
 
     def _setup_menu_bar(self):
 
-        menu_bar = self.menuBar()
+        menu = self.menuBar()
 
-        menu_bar.addMenu("File")
-        menu_bar.addMenu("Edit")
-        menu_bar.addMenu("View")
-        menu_bar.addMenu("Build")
-        menu_bar.addMenu("Tools")
-        menu_bar.addMenu("Help")
+        # FILE
+        file_menu = menu.addMenu("File")
+        file_menu.addAction(self.ide_actions.new_file)
+        file_menu.addAction(self.ide_actions.open_file)
+        file_menu.addAction(self.ide_actions.open_project)
+
+        file_menu.addSeparator()
+        file_menu.addAction(self.ide_actions.save)
+        file_menu.addAction(self.ide_actions.save_as)
+
+        # BUILD
+        build_menu = menu.addMenu("Build")
+        build_menu.addAction(self.ide_actions.compile)
+        build_menu.addAction(self.ide_actions.run)
+
+        # VIEW
+        view_menu = menu.addMenu("View")
+        view_menu.addAction(self.ide_actions.toggle_terminal)
+        view_menu.addAction(self.ide_actions.toggle_explorer)
+
+        # HELP
+        help_menu = menu.addMenu("Help")
+        help_menu.addAction("About")
 
     # ---------------- EDITOR ----------------
 
@@ -65,13 +86,6 @@ class MainWindow(QMainWindow):
 
         self.toolbar = MainToolBar(self)
         self.addToolBar(self.toolbar)
-
-        self.toolbar.open_action.triggered.connect(self.open_file)
-        self.toolbar.save_action.triggered.connect(self.save_current_file)
-        self.toolbar.save_as_action.triggered.connect(self.save_as_file)
-        self.toolbar.new_action.triggered.connect(self.new_file)
-
-        self.toolbar.open_project_action.triggered.connect(self.open_folder)
 
     # ---------------- FILE EXPLORER ----------------
 
@@ -218,3 +232,36 @@ class MainWindow(QMainWindow):
                 tab.save()
 
             event.accept()
+
+    # ---------------- BUILD SYSTEM (STUBS) ----------------
+
+    def compile_project(self):
+
+        if not self.project or not self.project.is_loaded():
+            self.status.showMessage("No project loaded")
+            return
+
+        self.status.showMessage("Compiling project...")
+
+        # TODO: real HDL pipeline (ghdl/verilator)
+        self.terminal_dock.terminal.append("Compile not implemented yet\n")
+
+    def run_project(self):
+
+        if not self.project or not self.project.is_loaded():
+            self.status.showMessage("No project loaded")
+            return
+
+        self.status.showMessage("Running simulation...")
+
+        self.terminal_dock.terminal.append("Run not implemented yet\n")
+
+    def toggle_terminal(self):
+
+        visible = self.terminal_dock.isVisible()
+        self.terminal_dock.setVisible(not visible)
+
+    def toggle_explorer(self):
+
+        visible = self.file_explorer_dock.isVisible()
+        self.file_explorer_dock.setVisible(not visible)
