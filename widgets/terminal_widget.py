@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QTextEdit
 
 
-class TerminalDock(QTextEdit):
+class TerminalWidget(QTextEdit):
 
     def __init__(self):
         super().__init__()
@@ -17,3 +17,6 @@ class TerminalDock(QTextEdit):
             color: #00ff88;
             border: none;
         """)
+
+    def write(self, text):
+        self.append(text)

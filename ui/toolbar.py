@@ -1,5 +1,4 @@
 from PyQt6.QtGui import QAction, QIcon
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QToolBar
 
 
@@ -16,41 +15,66 @@ class MainToolBar(QToolBar):
 
     def _create_actions(self):
 
-        run_action = QAction(
-            QIcon("assets/icons/play.svg"),
-            "Run",
+        # File actions
+
+        self.new_action = QAction(
+            QIcon("assets/icons/new.svg"),
+            "New File",
             self
         )
 
-        compile_action = QAction(
-            QIcon("assets/icons/compile.svg"),
-            "Compile",
+        self.open_action = QAction(
+            QIcon("assets/icons/open.svg"),
+            "Open File",
             self
         )
 
-        wave_action = QAction(
-            QIcon("assets/icons/wave.svg"),
-            "GTKWave",
-            self
-        )
-
-        save_action = QAction(
+        self.save_action = QAction(
             QIcon("assets/icons/save.svg"),
             "Save",
             self
         )
 
-        open_action = QAction(
-            QIcon("assets/icons/open.svg"),
-            "Open",
+        self.save_as_action = QAction(
+            QIcon("assets/icons/save_as.svg"),
+            "Save As",
             self
         )
 
-        self.addAction(open_action)
-        self.addAction(save_action)
+        # Build actions
+
+        self.compile_action = QAction(
+            QIcon("assets/icons/compile.svg"),
+            "Compile",
+            self
+        )
+
+        self.run_action = QAction(
+            QIcon("assets/icons/play.svg"),
+            "Run",
+            self
+        )
+
+        self.wave_action = QAction(
+            QIcon("assets/icons/wave.svg"),
+            "GTKWave",
+            self
+        )
+
+        # Add actions
+
+        self.addAction(self.new_action)
+
+        self.addAction(self.open_action)
+
+        self.addAction(self.save_action)
+
+        self.addAction(self.save_as_action)
 
         self.addSeparator()
 
-        self.addAction(compile_action)
-        self.addAction(run_action)
-        self.addAction(wave_action)
+        self.addAction(self.compile_action)
+
+        self.addAction(self.run_action)
+
+        self.addAction(self.wave_action)

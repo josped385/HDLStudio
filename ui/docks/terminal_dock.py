@@ -1,8 +1,7 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
-    QTextEdit,
-    QDockWidget,
-)
+from PyQt6.QtWidgets import QDockWidget
+
+from widgets.terminal_widget import TerminalWidget
 
 
 class TerminalDock(QDockWidget):
@@ -19,12 +18,6 @@ class TerminalDock(QDockWidget):
             QDockWidget.DockWidgetFeature.DockWidgetMovable
         )
 
-        self.terminal = QTextEdit()
-
-        self.terminal.setReadOnly(True)
-
-        self.terminal.setPlainText(
-            "HDLStudio terminal initialized...\n"
-        )
+        self.terminal = TerminalWidget()
 
         self.setWidget(self.terminal)

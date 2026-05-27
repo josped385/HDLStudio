@@ -1,9 +1,5 @@
 from PyQt6.QtGui import QColor
-from PyQt6.Qsci import (
-    QsciLexerCPP,
-    QsciScintilla,
-)
-from PyQt6.QtWidgets import QApplication
+from PyQt6.Qsci import QsciScintilla
 
 
 class CodeEditor(QsciScintilla):
@@ -12,91 +8,69 @@ class CodeEditor(QsciScintilla):
         super().__init__()
 
         self._setup_editor()
-        self._setup_lexer()
 
     def _setup_editor(self):
 
-        # Font
-        #font = QFont("Courier New", 12)
-
-        #self.setFont(font)
-
-        # UTF8
+        # UTF-8 support
         self.setUtf8(True)
 
         # Line numbers
-        self.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
+        self.setMarginType(
+            0,
+            QsciScintilla.MarginType.NumberMargin
+        )
+
         self.setMarginWidth(0, "00000")
 
-        # Colores
-        self.setMarginsBackgroundColor(QColor("#2b2b2b"))
-        self.setMarginsForegroundColor(QColor("#aaaaaa"))
+        # Margin colors
+        self.setMarginsBackgroundColor(
+            QColor("#2b2b2b")
+        )
 
-        # Current line
+        self.setMarginsForegroundColor(
+            QColor("#aaaaaa")
+        )
+
+        # Current line highlight
         self.setCaretLineVisible(True)
-        self.setCaretLineBackgroundColor(QColor("#2f2f2f"))
 
-        # Cursor
-        self.setCaretForegroundColor(QColor("#ffffff"))
+        self.setCaretLineBackgroundColor(
+            QColor("#2f2f2f")
+        )
+
+        # Cursor color
+        self.setCaretForegroundColor(
+            QColor("#ffffff")
+        )
 
         # Indentation
         self.setIndentationsUseTabs(False)
         self.setIndentationWidth(4)
-        self.setAutoIndent(True)
 
-        # Folding
-        self.setFolding(
-            QsciScintilla.FoldStyle.BoxedTreeFoldStyle
-        )
+        # Disable automatic indentation
+        self.setAutoIndent(False)
 
-        # Brace matching
-        self.setBraceMatching(
-            QsciScintilla.BraceMatch.StrictBraceMatch
-        )
-
-        # Tabs
+        # Tab width
         self.setTabWidth(4)
 
-        # Selection colors
+        # Selection color
         self.setSelectionBackgroundColor(
             QColor("#264f78")
         )
 
-        # Background
+        # Editor background
         self.setPaper(QColor("#1e1e1e"))
 
-        # Text color
+        # Default text color
         self.setColor(QColor("#dcdcdc"))
 
-        # Autocomplete
-        self.setAutoCompletionSource(
-            QsciScintilla.AutoCompletionSource.AcsAll
-        )
-
-        self.setAutoCompletionThreshold(1)
-
+        # Vertical edge line
         self.setEdgeMode(
             QsciScintilla.EdgeMode.EdgeLine
         )
 
         self.setEdgeColumn(100)
 
-        self.setEdgeColor(QColor("#333333"))
-
-    def _setup_lexer(self):
-        lexer = QsciLexerCPP()
-
-        # Fuente del sistema
-        font = QApplication.font()
-
-        # FORZAR fuente global del lexer
-        lexer.setDefaultFont(font)
-
-        # IMPORTANTÍSIMO: forzar todos los estilos
-        for i in range(128):
-            lexer.setFont(font, i)
-
-        lexer.setDefaultPaper(QColor("#1e1e1e"))
-        lexer.setDefaultColor(QColor("#dcdcdc"))
-
-        self.setLexer(lexer)
+        self.setEdgeColor(
+            QColor("#333333")
+        )
