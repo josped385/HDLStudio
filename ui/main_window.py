@@ -36,18 +36,18 @@ class MainWindow(QMainWindow):
         self._setup_terminal()
         self._setup_status_bar()
 
-    # ---------------- MENU BAR ----------------
+    # ---------------- MENU ----------------
 
     def _setup_menu_bar(self):
 
         menu_bar = self.menuBar()
 
-        file_menu = menu_bar.addMenu("File")
-        edit_menu = menu_bar.addMenu("Edit")
-        view_menu = menu_bar.addMenu("View")
-        build_menu = menu_bar.addMenu("Build")
-        tools_menu = menu_bar.addMenu("Tools")
-        help_menu = menu_bar.addMenu("Help")
+        menu_bar.addMenu("File")
+        menu_bar.addMenu("Edit")
+        menu_bar.addMenu("View")
+        menu_bar.addMenu("Build")
+        menu_bar.addMenu("Tools")
+        menu_bar.addMenu("Help")
 
     # ---------------- EDITOR ----------------
 
@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
 
         self.editor_tabs = EditorTabs()
         self.setCentralWidget(self.editor_tabs)
+        self.editor_tabs.setParent(self)
 
     # ---------------- TOOLBAR ----------------
 
@@ -63,8 +64,11 @@ class MainWindow(QMainWindow):
         self.toolbar = MainToolBar(self)
         self.addToolBar(self.toolbar)
 
+        # conexiones
         self.toolbar.open_action.triggered.connect(self.open_file)
         self.toolbar.save_action.triggered.connect(self.save_current_file)
+        self.toolbar.save_as_action.triggered.connect(self.save_as_file)
+        self.toolbar.new_action.triggered.connect(self.new_file)
 
     # ---------------- FILE EXPLORER ----------------
 
@@ -123,4 +127,26 @@ class MainWindow(QMainWindow):
             return
 
         tab.save()
-        self.editor_tabs.mark_saved(tab)
+
+    def new_file(self):
+
+        self.editor_tabs.new_file()
+
+    def save_as_file(self):
+
+        tab = self.editor_tabs.current_tab()
+
+        if not tab:
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save As",
+            "",
+            "HDL Files (*.vhd *.v *.sv);;All Files (*)"
+        )
+
+        if not path:
+            return
+
+        self.editor_tabs.save_current_as(path)

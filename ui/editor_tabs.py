@@ -11,12 +11,44 @@ class EditorTabs(QTabWidget):
         super().__init__()
 
         self.tabs = {}  # path -> EditorTab
+        self.untitled_counter = 0
+
+        self.currentChanged.connect(self._on_tab_changed)
 
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setDocumentMode(True)
 
         self.tabCloseRequested.connect(self.close_tab)
+
+    def _on_tab_changed(self, index):
+
+        widget = self.widget(index)
+        tab = self.get_tab_by_editor(widget)
+
+        if not tab:
+            return
+
+        # reconnect cursor signal safely
+        try:
+            tab.editor.cursor_position_changed.disconnect()
+        except:
+            pass
+
+        tab.editor.cursor_position_changed.connect(
+            self._emit_cursor_change
+        )
+
+    def _emit_cursor_change(self, line, col):
+
+        # propagate to main window via central widget
+        self.parent().status.file_label.setText(
+            f"{self.current_tab().filename}"
+        )
+
+        self.parent().status.position_label.setText(
+            f"Ln {line}, Col {col}"
+        )
 
     # ---------------- OPEN FILE ----------------
 
@@ -114,3 +146,40 @@ class EditorTabs(QTabWidget):
 
         if name.endswith("*"):
             self.setTabText(index, name[:-1])
+
+    def new_file(self):
+
+        self.untitled_counter += 1
+
+        tab = EditorTab(None)
+
+        tab.modified_changed.connect(self._on_tab_modified)
+
+        self.tabs[id(tab.editor)] = tab
+
+        self.addTab(
+            tab.editor,
+            QIcon("assets/icons/file.svg"),
+            f"untitled-{self.untitled_counter}"
+        )
+
+        self.setCurrentWidget(tab.editor)
+
+    def save_current_as(self, path):
+
+        tab = self.current_tab()
+
+        if not tab:
+            return
+
+        success = tab.save_as(path)
+
+        if success:
+            self._rename_tab(tab)
+
+    def _rename_tab(self, tab):
+
+        index = self._find_tab_index(tab.editor)
+
+        if index != -1:
+            self.setTabText(index, tab.filename)
