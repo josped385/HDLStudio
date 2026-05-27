@@ -8,14 +8,17 @@ class MainToolBar(QToolBar):
         super().__init__("Main Toolbar", parent)
 
         self.setMovable(False)
-
         self.setIconSize(parent.iconSize())
 
         self._create_actions()
 
     def _create_actions(self):
 
-        # File actions
+        self.open_project_action = QAction(
+            QIcon("assets/icons/open_folder.svg"),
+            "Open Project",
+            self
+        )
 
         self.new_action = QAction(
             QIcon("assets/icons/new.svg"),
@@ -41,8 +44,6 @@ class MainToolBar(QToolBar):
             self
         )
 
-        # Build actions
-
         self.compile_action = QAction(
             QIcon("assets/icons/compile.svg"),
             "Compile",
@@ -61,20 +62,14 @@ class MainToolBar(QToolBar):
             self
         )
 
-        # Add actions
-
+        self.addAction(self.open_project_action)
         self.addAction(self.new_action)
-
         self.addAction(self.open_action)
-
         self.addAction(self.save_action)
-
         self.addAction(self.save_as_action)
 
         self.addSeparator()
 
         self.addAction(self.compile_action)
-
         self.addAction(self.run_action)
-
         self.addAction(self.wave_action)

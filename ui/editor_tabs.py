@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QTabWidget
+from PyQt6.QtWidgets import QTabWidget, QMessageBox
 
 from ui.editor_tab import EditorTab
 
@@ -10,86 +10,136 @@ class EditorTabs(QTabWidget):
     def __init__(self):
         super().__init__()
 
-        self.tabs = {}  # path -> EditorTab
-        self.untitled_counter = 0
+        # editor_tab -> EditorTab
+        self.tabs = {}
 
-        self.currentChanged.connect(self._on_tab_changed)
+        self.project = None
+
+        self.untitled_counter = 0
 
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setDocumentMode(True)
 
         self.tabCloseRequested.connect(self.close_tab)
+        self.currentChanged.connect(self._on_tab_changed)
 
-    def _on_tab_changed(self, index):
+    # ---------------- CURRENT TAB ----------------
 
-        widget = self.widget(index)
-        tab = self.get_tab_by_editor(widget)
+    def current_tab(self):
 
-        if not tab:
-            return
+        widget = self.currentWidget()
 
-        # reconnect cursor signal safely
-        try:
-            tab.editor.cursor_position_changed.disconnect()
-        except:
-            pass
+        for tab in self.tabs.values():
+            if tab.editor == widget:
+                return tab
 
-        tab.editor.cursor_position_changed.connect(
-            self._emit_cursor_change
-        )
+        return None
 
-    def _emit_cursor_change(self, line, col):
+    def set_project(self, project):
 
-        # propagate to main window via central widget
-        self.parent().status.file_label.setText(
-            f"{self.current_tab().filename}"
-        )
-
-        self.parent().status.position_label.setText(
-            f"Ln {line}, Col {col}"
-        )
+        self.project = project
 
     # ---------------- OPEN FILE ----------------
 
     def open_file(self, path):
 
-        # Already open
+        # normalize path
+        path = os.path.abspath(path)
+
+        # already open
         if path in self.tabs:
             tab = self.tabs[path]
             self.setCurrentWidget(tab.editor)
             return
 
-        try:
-            tab = EditorTab(path)
-            tab.load_file()
+        # create tab
+        tab = EditorTab(path)
+        tab.load_file()
 
-            tab.modified_changed.connect(self._on_tab_modified)
+        tab.modified_changed.connect(self._on_tab_modified)
 
-            self.tabs[path] = tab
+        self.tabs[path] = tab
 
-            self.addTab(
-                tab.editor,
-                QIcon("assets/icons/file.svg"),
-                tab.filename
-            )
+        # ---------------- DISPLAY NAME ----------------
+        if self.project and self.project.is_inside(path):
+            display_name = self.project.to_relative(path)
+        else:
+            display_name = os.path.basename(path)
 
-            self.setCurrentWidget(tab.editor)
+        # ---------------- ADD TAB ----------------
+        self.addTab(
+            tab.editor,
+            QIcon("assets/icons/file.svg"),
+            display_name
+        )
 
-        except Exception as e:
-            print(f"Error opening file: {e}")
+        self.setCurrentWidget(tab.editor)
 
-    # ---------------- CLOSE TAB ----------------
+    # ---------------- NEW FILE ----------------
+
+    def new_file(self):
+
+        self.untitled_counter += 1
+
+        tab = EditorTab(None)
+
+        tab.modified_changed.connect(self._on_tab_modified)
+
+        self.tabs[id(tab.editor)] = tab
+
+        self.addTab(
+            tab.editor,
+            QIcon("assets/icons/file.svg"),
+            f"untitled-{self.untitled_counter}"
+        )
+
+        self.setCurrentWidget(tab.editor)
+
+    # ---------------- CLOSE TAB (SAFE) ----------------
 
     def close_tab(self, index):
 
         widget = self.widget(index)
-        tab = self.get_tab_by_editor(widget)
 
-        if tab:
+        tab = None
+        for t in self.tabs.values():
+            if t.editor == widget:
+                tab = t
+                break
 
-            if tab.path in self.tabs:
-                del self.tabs[tab.path]
+        if not tab:
+            self.removeTab(index)
+            return
+
+        # 🔥 CHECK MODIFIED STATE
+        if tab.modified:
+
+            result = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                f"Save changes to {tab.filename}?",
+                QMessageBox.StandardButton.Save |
+                QMessageBox.StandardButton.Discard |
+                QMessageBox.StandardButton.Cancel
+            )
+
+            if result == QMessageBox.StandardButton.Cancel:
+                return
+
+            if result == QMessageBox.StandardButton.Save:
+                tab.save()
+
+        # remove from registry
+        key_to_remove = None
+
+        for k, v in self.tabs.items():
+            if v == tab:
+                key_to_remove = k
+                break
+
+        if key_to_remove:
+            del self.tabs[key_to_remove]
 
         self.removeTab(index)
 
@@ -113,57 +163,35 @@ class EditorTabs(QTabWidget):
             if name.endswith("*"):
                 self.setTabText(index, name[:-1])
 
-    def _find_tab_index(self, widget):
+    # ---------------- TAB CHANGE ----------------
 
-        for i in range(self.count()):
-            if self.widget(i) == widget:
-                return i
+    def _on_tab_changed(self, index):
 
-        return -1
+        tab = self.current_tab()
 
-    # ---------------- UTIL ----------------
-
-    def get_tab_by_editor(self, editor_widget):
-
-        for tab in self.tabs.values():
-            if tab.editor == editor_widget:
-                return tab
-        return None
-
-    def current_tab(self):
-
-        widget = self.currentWidget()
-        return self.get_tab_by_editor(widget)
-
-    def mark_saved(self, tab):
-
-        index = self._find_tab_index(tab.editor)
-
-        if index == -1:
+        if not tab:
             return
 
-        name = self.tabText(index)
+        # status bar update
+        self.parent().status.file_label.setText(tab.filename)
 
-        if name.endswith("*"):
-            self.setTabText(index, name[:-1])
-
-    def new_file(self):
-
-        self.untitled_counter += 1
-
-        tab = EditorTab(None)
-
-        tab.modified_changed.connect(self._on_tab_modified)
-
-        self.tabs[id(tab.editor)] = tab
-
-        self.addTab(
-            tab.editor,
-            QIcon("assets/icons/file.svg"),
-            f"untitled-{self.untitled_counter}"
+        # cursor tracking connect (safe, no disconnect hack)
+        tab.editor.cursor_position_changed.connect(
+            self._emit_cursor_change
         )
 
-        self.setCurrentWidget(tab.editor)
+    def _emit_cursor_change(self, line, col):
+
+        tab = self.current_tab()
+
+        if not tab:
+            return
+
+        self.parent().status.position_label.setText(
+            f"Ln {line}, Col {col}"
+        )
+
+    # ---------------- SAVE AS ----------------
 
     def save_current_as(self, path):
 
@@ -172,9 +200,7 @@ class EditorTabs(QTabWidget):
         if not tab:
             return
 
-        success = tab.save_as(path)
-
-        if success:
+        if tab.save_as(path):
             self._rename_tab(tab)
 
     def _rename_tab(self, tab):
@@ -183,3 +209,12 @@ class EditorTabs(QTabWidget):
 
         if index != -1:
             self.setTabText(index, tab.filename)
+
+    # ---------------- UTIL ----------------
+
+    def _find_tab_index(self, widget):
+
+        for i in range(self.count()):
+            if self.widget(i) == widget:
+                return i
+        return -1
