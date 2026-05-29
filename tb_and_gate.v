@@ -6,7 +6,7 @@ reg a;
 reg b;
 wire y;
 
-// Instancia del módulo
+// Instancia del DUT (Device Under Test)
 and_gate uut (
     .a(a),
     .b(b),
@@ -14,10 +14,14 @@ and_gate uut (
 );
 
 initial begin
-    // Monitor para ver cambios
-    $monitor("Tiempo=%0t a=%b b=%b y=%b", $time, a, b, y);
+    // Generar archivo VCD
+    $dumpfile("waves.vcd");
+    $dumpvars(0, tb_and_gate);
 
-    // Casos de prueba
+    // Mostrar señales por consola
+    $monitor("t=%0t | a=%b b=%b -> y=%b", $time, a, b, y);
+
+    // Estímulos
     a = 0; b = 0;
     #10;
 

@@ -30,6 +30,7 @@ class MainToolBar(QToolBar):
 
         self.addAction(a.compile)
         self.addAction(a.run)
+        self.addAction(a.view_waves)
 
         self.addSeparator()
 

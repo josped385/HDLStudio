@@ -89,8 +89,14 @@ class BaseHDLLexer(QsciLexerCustom):
         segment = text[line_start:end]
 
         self.startStyling(line_start, 0x1f)
+        styled = 0
         for token, style_id in self._tokenize(segment):
             self.setStyling(len(token), style_id)
+            styled += len(token)
+
+        remaining = len(segment) - styled
+        if remaining > 0:
+            self.setStyling(remaining, Style.Default)
 
     def _tokenize(self, text):
         raise NotImplementedError

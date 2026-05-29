@@ -40,6 +40,9 @@ class IDEActions:
         self.toggle_explorer = QAction("Toggle Explorer", main_window)
         self.toggle_explorer.setShortcut(QKeySequence("Ctrl+B"))
 
+        self.view_waves = QAction(QIcon("assets/icons/wave.svg"), "View Waves", main_window)
+        self.view_waves.setShortcut(QKeySequence("F7"))
+
         # ---------------- THEME ----------------
 
         self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
@@ -63,5 +66,6 @@ class IDEActions:
 
         self.toggle_terminal.triggered.connect(self.main.toggle_terminal)
         self.toggle_explorer.triggered.connect(self.main.toggle_explorer)
+        self.view_waves.triggered.connect(self.main.view_waves)
 
         self.toggle_theme.triggered.connect(self.main.toggle_theme)

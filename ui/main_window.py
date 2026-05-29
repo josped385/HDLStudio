@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox
@@ -16,6 +18,7 @@ from core.project import Project
 from ui.actions import IDEActions
 from themes.theme_manager import ThemeManager
 from core.build_system import BuildSystem
+from core.wave_viewer import WaveViewer
 
 
 class MainWindow(QMainWindow):
@@ -35,6 +38,7 @@ class MainWindow(QMainWindow):
 
         self.project = Project()
         self.build_system = BuildSystem(self.project)
+        self.wave_viewer = WaveViewer()
 
         self._setup_ui()
         self._warn_if_no_iverilog()
@@ -74,6 +78,8 @@ class MainWindow(QMainWindow):
         view_menu = menu.addMenu("View")
         view_menu.addAction(self.ide_actions.toggle_terminal)
         view_menu.addAction(self.ide_actions.toggle_explorer)
+
+        view_menu.addAction(self.ide_actions.view_waves)
 
         view_menu.addSeparator()
         view_menu.addAction(self.ide_actions.toggle_theme)
@@ -352,6 +358,7 @@ class MainWindow(QMainWindow):
     def run_project(self):
 
         self._ensure_files_saved()
+        self._refresh_build_context()
 
         self.status.showMessage("Running...")
         self.terminal_dock.output.append("=" * 50 + "\n")
@@ -365,6 +372,39 @@ class MainWindow(QMainWindow):
         self.status.showMessage(
             "Simulation finished" if ok else "Simulation failed"
         )
+
+    def view_waves(self):
+
+        if not self.wave_viewer.available:
+            self.status.showMessage(
+                "GTKWave not found — check gtkwave/bin/gtkwave.exe"
+            )
+            return
+
+        vcd = self.build_system.last_vcd_path
+
+        if not vcd or not os.path.isfile(vcd):
+            root = self.build_system.root_dir
+            if root:
+                from core.wave_viewer import find_wave_files
+                all_waves = find_wave_files(root)
+                if not all_waves:
+                    all_waves = find_wave_files(
+                        os.path.join(root, self.build_system.build_dir_name)
+                    )
+                vcd = max(all_waves, key=os.path.getmtime) if all_waves else None
+
+        if not vcd:
+            self.status.showMessage(
+                "No waveform file found — run simulation first (F5 → F6)"
+            )
+            return
+
+        ok = self.wave_viewer.open(vcd)
+        if ok:
+            self.status.showMessage(f"GTKWave: {os.path.basename(vcd)}")
+        else:
+            self.status.showMessage("Failed to launch GTKWave")
 
     def toggle_terminal(self):
 

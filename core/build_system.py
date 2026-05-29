@@ -15,6 +15,7 @@ class BuildSystem:
         self.testbench_file = None
         self.output_name = "simulation.vvp"
         self.build_dir_name = "build"
+        self.last_vcd_path = None
 
     @property
     def _iverilog_path(self):
@@ -36,6 +37,8 @@ class BuildSystem:
     def vvp_available(self):
         return os.path.isfile(self._vvp_path)
 
+    _SKIP_DIRS = {"gtkwave", "iverilog", ".venv", ".git", "__pycache__"}
+
     def collect_hdl_files(self):
         root = self.root_dir
         if not root:
@@ -43,6 +46,9 @@ class BuildSystem:
         hdl_files = []
         for ext in ("**/*.v", "**/*.sv", "**/*.vhd", "**/*.vhdl"):
             for f in glob.glob(os.path.join(root, ext), recursive=True):
+                parts = os.path.relpath(f, root).replace("\\", "/").split("/")
+                if any(p in self._SKIP_DIRS for p in parts):
+                    continue
                 if os.path.isfile(f):
                     hdl_files.append(f)
         return sorted(hdl_files)
@@ -141,6 +147,24 @@ class BuildSystem:
         terminal_callback(f"\nCompilation failed (exit code {result.returncode})\n")
         return False
 
+    def _find_dump_files(self, search_dir):
+        """Find waveform dump files (.vcd, .fst, .lxt, .ghw, .vcd.gz) in search_dir."""
+        if not search_dir or not os.path.isdir(search_dir):
+            return []
+        patterns = ["*.vcd", "*.fst", "*.lxt", "*.lxt2", "*.ghw", "*.vcd.gz"]
+        found = []
+        for p in patterns:
+            found.extend(glob.glob(os.path.join(search_dir, p)))
+        found.extend(glob.glob(os.path.join(search_dir, "**", "dump.vcd")))
+        found.extend(glob.glob(os.path.join(search_dir, "**", "*.vcd")))
+        return sorted(set(found))
+
+    def _latest_dump(self, search_dir):
+        files = self._find_dump_files(search_dir)
+        if not files:
+            return None
+        return max(files, key=os.path.getmtime)
+
     def run(self, terminal_callback):
         root = self.root_dir
         if not root:
@@ -185,9 +209,25 @@ class BuildSystem:
 
         if result.returncode == 0:
             terminal_callback("Simulation finished successfully.\n")
-            vcd_files = glob.glob(os.path.join(root, "*.vcd"))
-            if vcd_files:
-                terminal_callback(f"VCD dump: {os.path.basename(vcd_files[0])}\n")
+
+            self.last_vcd_path = self._latest_dump(root)
+            if not self.last_vcd_path:
+                self.last_vcd_path = self._latest_dump(build_dir)
+
+            if self.last_vcd_path:
+                terminal_callback(
+                    f"\n>> Waveform: {os.path.basename(self.last_vcd_path)}\n"
+                    f"   Press F7 or click View Waves to open\n"
+                )
+            else:
+                terminal_callback(
+                    "\n>> No waveform (.vcd) generated.\n"
+                    "   Make sure your testbench includes:\n"
+                    '     initial begin\n'
+                    '         $dumpfile("dump.vcd");\n'
+                    '         $dumpvars(0, testbench_name);\n'
+                    '     end\n'
+                )
             return True
 
         terminal_callback(f"Simulation exited with code {result.returncode}\n")
