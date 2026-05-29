@@ -13,7 +13,7 @@ class EditorTab(QObject):
         super().__init__()
 
         self.path = path
-        self.editor = CodeEditor(path)
+        self.editor = CodeEditor()
         self.modified = False
 
         self.editor.textChanged.connect(
@@ -58,12 +58,10 @@ class EditorTab(QObject):
 
     def save_as(self, new_path=None):
 
-        # If no path provided, caller must give one
         if not new_path:
             return False
 
         self.path = new_path
-        self.editor.set_file_path(new_path)
         self._write_to_disk(self.path)
         self._set_modified(False)
 

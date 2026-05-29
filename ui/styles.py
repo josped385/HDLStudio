@@ -96,6 +96,31 @@ QLineEdit {{
     padding: 4px;
 }}
 
+QComboBox {{
+    background-color: {c["editor_bg"]};
+    color: {c["text"]};
+    border: 1px solid {c["panel_hover"]};
+    padding: 3px 6px;
+    min-height: 22px;
+}}
+
+QComboBox::drop-down {{
+    border: none;
+    background: {c["panel_hover"]};
+    width: 20px;
+}}
+
+QComboBox::down-arrow {{
+    image: none;
+}}
+
+QComboBox QAbstractItemView {{
+    background-color: {c["panel_bg"]};
+    color: {c["text"]};
+    selection-background-color: {c["accent"]};
+    border: 1px solid {c["panel_hover"]};
+}}
+
 QTextEdit {{
     background-color: {c["terminal_bg"]};
     color: {c["terminal_text"]};

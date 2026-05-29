@@ -13,6 +13,8 @@ from core.project import Project
 
 from ui.actions import IDEActions
 from themes.theme_manager import ThemeManager
+from core.build_system import BuildSystem
+
 
 class MainWindow(QMainWindow):
 
@@ -30,8 +32,10 @@ class MainWindow(QMainWindow):
         self.ide_actions = IDEActions(self)
 
         self.project = Project()
+        self.build_system = BuildSystem(self.project)
 
         self._setup_ui()
+        self._warn_if_no_iverilog()
 
     # ---------------- UI ----------------
 
@@ -104,15 +108,9 @@ class MainWindow(QMainWindow):
             self.file_explorer_dock
         )
 
-        # connect file open to IDE handler (not raw tabs)
         self.file_explorer_dock.explorer.file_open_requested.connect(
             self.open_project_file
         )
-
-    def open_project_file(self, path):
-
-        # future hook: validate project scope
-        self.editor_tabs.open_file(path)
 
     # ---------------- TERMINAL ----------------
 
@@ -132,6 +130,26 @@ class MainWindow(QMainWindow):
         self.status = IDEStatusBar()
         self.setStatusBar(self.status)
 
+    # ---------------- FILE CONTEXT ----------------
+
+    def _refresh_build_context(self, filepath=None):
+
+        if not filepath:
+            tab = self.editor_tabs.current_tab()
+            if tab and tab.path:
+                filepath = tab.path
+
+        if filepath:
+            self.build_system.set_working_dir_from_file(filepath)
+
+        if self.project and self.project.is_loaded():
+            self.build_system.project = self.project
+        else:
+            self.build_system.project = None
+
+        self.build_system.auto_select_files()
+        self.toolbar.refresh_file_lists()
+
     # ---------------- ACTIONS ----------------
 
     def open_file(self):
@@ -147,6 +165,12 @@ class MainWindow(QMainWindow):
             return
 
         self.editor_tabs.open_file(path)
+        self._refresh_build_context(path)
+
+    def open_project_file(self, path):
+
+        self.editor_tabs.open_file(path)
+        self._refresh_build_context(path)
 
     def save_current_file(self):
 
@@ -155,31 +179,15 @@ class MainWindow(QMainWindow):
         if not tab:
             return
 
+        if not tab.path:
+            self.save_as_file()
+            return
+
         tab.save()
 
     def new_file(self):
 
         self.editor_tabs.new_file()
-
-    def open_folder(self):
-
-        from PyQt6.QtWidgets import QFileDialog
-
-        path = QFileDialog.getExistingDirectory(
-            self,
-            "Open Project Folder"
-        )
-
-        if not path:
-            return
-
-        self.project.load(path)
-
-        self.editor_tabs.set_project(self.project)
-
-        self.file_explorer_dock.explorer.setRootIndex(
-            self.file_explorer_dock.explorer.model.index(path)
-        )
 
     def save_as_file(self):
 
@@ -199,8 +207,40 @@ class MainWindow(QMainWindow):
             return
 
         self.editor_tabs.save_current_as(path)
+        self._refresh_build_context(path)
 
-    # ---------------- CLOSE EVENT (🔥 NUEVO) ----------------
+    def open_folder(self):
+
+        from PyQt6.QtWidgets import QFileDialog
+
+        path = QFileDialog.getExistingDirectory(
+            self,
+            "Open Project Folder"
+        )
+
+        if not path:
+            return
+
+        self.project.load(path)
+        self.build_system.project = self.project
+
+        self.editor_tabs.set_project(self.project)
+
+        self.file_explorer_dock.explorer.setRootIndex(
+            self.file_explorer_dock.explorer.model.index(path)
+        )
+
+        self._refresh_build_context()
+        self.status.showMessage(f"Project loaded: {self.project.name}")
+
+    def _warn_if_no_iverilog(self):
+
+        if not self.build_system.iverilog_available():
+            self.status.showMessage(
+                "Icarus Verilog not found in iverilog/ — compile/run disabled"
+            )
+
+    # ---------------- CLOSE EVENT ----------------
 
     def closeEvent(self, event):
 
@@ -239,63 +279,51 @@ class MainWindow(QMainWindow):
 
             event.accept()
 
-    # ---------------- BUILD SYSTEM (STUBS) ----------------
+    # ---------------- BUILD SYSTEM ----------------
 
-    def _collect_hdl_files(self):
+    def _ensure_files_saved(self):
 
-        if not self.project or not self.project.is_loaded():
-            return []
-
-        import glob as globmod
-        hdl_files = []
-        for ext in ("**/*.v", "**/*.sv", "**/*.vhd", "**/*.vhdl"):
-            pattern = self.project.to_absolute(ext)
-            hdl_files.extend(globmod.glob(pattern, recursive=True))
-        return sorted(hdl_files)
+        any_saved = False
+        for tab in self.editor_tabs.tabs.values():
+            if tab.modified:
+                tab.save()
+                any_saved = True
+        return any_saved
 
     def compile_project(self):
 
-        if not self.project or not self.project.is_loaded():
-            self.status.showMessage("No project loaded")
-            return
+        self._ensure_files_saved()
+        self._refresh_build_context()
 
-        self.status.showMessage("Compiling project...")
+        self.status.showMessage("Compiling...")
+        self.terminal_dock.output.append("═" * 50 + "\n")
+        self.terminal_dock.output.append(">> COMPILING\n\n")
 
-        files = self._collect_hdl_files()
-        if files:
-            self.terminal_dock.output.append(
-                f"Found {len(files)} HDL file(s) for compilation:\n"
-            )
-            for f in files:
-                rel = self.project.to_relative(f)
-                self.terminal_dock.output.append(f"  {rel}\n")
-            self.terminal_dock.output.append(
-                "Compilation pipeline not yet configured.\n"
-                "Install a simulator (iverilog/ghdl/verilator) to enable compilation.\n"
-            )
-        else:
-            self.terminal_dock.output.append(
-                "No HDL files found in project.\n"
-            )
+        def write(text):
+            self.terminal_dock.output.append(text)
+
+        ok = self.build_system.compile(write)
+
+        self.status.showMessage(
+            "Compilation successful" if ok else "Compilation failed"
+        )
 
     def run_project(self):
 
-        if not self.project or not self.project.is_loaded():
-            self.status.showMessage("No project loaded")
-            return
+        self._ensure_files_saved()
 
-        self.status.showMessage("Running simulation...")
+        self.status.showMessage("Running...")
+        self.terminal_dock.output.append("═" * 50 + "\n")
+        self.terminal_dock.output.append(">> RUNNING SIMULATION\n\n")
 
-        files = self._collect_hdl_files()
-        if files:
-            self.terminal_dock.output.append(
-                f"Run pipeline not yet configured.\n"
-                f"Found {len(files)} HDL file(s) - compile before running.\n"
-            )
-        else:
-            self.terminal_dock.output.append(
-                "No HDL files found in project.\n"
-            )
+        def write(text):
+            self.terminal_dock.output.append(text)
+
+        ok = self.build_system.run(write)
+
+        self.status.showMessage(
+            "Simulation finished" if ok else "Simulation failed"
+        )
 
     def toggle_terminal(self):
 

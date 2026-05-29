@@ -57,7 +57,9 @@ class EditorTabs(QTabWidget):
         tab = EditorTab(path)
         tab.load_file()
 
-        tab.modified_changed.connect(self._on_tab_modified)
+        tab.modified_changed.connect(
+            lambda modified, t=tab: self._on_tab_modified(t, modified)
+        )
 
         self.tabs[path] = tab
 
@@ -84,7 +86,9 @@ class EditorTabs(QTabWidget):
 
         tab = EditorTab(None)
 
-        tab.modified_changed.connect(self._on_tab_modified)
+        tab.modified_changed.connect(
+            lambda modified, t=tab: self._on_tab_modified(t, modified)
+        )
 
         self.tabs[id(tab.editor)] = tab
 
@@ -145,9 +149,7 @@ class EditorTabs(QTabWidget):
 
     # ---------------- MODIFIED HANDLING ----------------
 
-    def _on_tab_modified(self, modified):
-
-        tab = self.sender()
+    def _on_tab_modified(self, tab, modified):
 
         index = self._find_tab_index(tab.editor)
 
@@ -216,6 +218,7 @@ class EditorTabs(QTabWidget):
 
         if tab.save_as(path):
             self._rename_tab(tab)
+            self._rekey_tab(tab, path)
 
     def _rename_tab(self, tab):
 
@@ -223,6 +226,18 @@ class EditorTabs(QTabWidget):
 
         if index != -1:
             self.setTabText(index, tab.filename)
+
+    def _rekey_tab(self, tab, new_key):
+
+        old_key = None
+        for k, v in list(self.tabs.items()):
+            if v == tab:
+                old_key = k
+                break
+
+        if old_key is not None and old_key != new_key:
+            del self.tabs[old_key]
+            self.tabs[new_key] = tab
 
     # ---------------- UTIL ----------------
 
