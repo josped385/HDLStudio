@@ -42,6 +42,7 @@ class MainWindow(QMainWindow):
 
         self._setup_ui()
         self._warn_if_no_iverilog()
+        self._refresh_icons()
 
     # ---------------- UI ----------------
 
@@ -420,11 +421,53 @@ class MainWindow(QMainWindow):
         else:
             self._show_activity_panel("explorer")
 
+    def _refresh_icons(self):
+
+        from themes.theme_manager import ThemeManager as TM
+        icon_map = {
+            "file_explorer": self.activity_bar.explorer_btn,
+            "connections": self.activity_bar.connections_btn,
+        }
+        for name, action in icon_map.items():
+            action.setIcon(QIcon(TM.icon(name)))
+
+        toolbar_icons = {
+            "new": self.ide_actions.new_file,
+            "open": self.ide_actions.open_file,
+            "open_folder": self.ide_actions.open_project,
+            "save": self.ide_actions.save,
+            "save_as": self.ide_actions.save_as,
+            "compile": self.ide_actions.compile,
+            "play": self.ide_actions.run,
+            "wave": self.ide_actions.view_waves,
+            "darklight": self.ide_actions.toggle_theme,
+            "terminal": self.ide_actions.toggle_terminal,
+        }
+        for name, action in toolbar_icons.items():
+            action.setIcon(QIcon(TM.icon(name)))
+
+        for i in range(self.editor_tabs.count()):
+            self.editor_tabs.setTabIcon(i, QIcon(TM.icon("file")))
+
     def toggle_theme(self):
 
         new_theme = "light" if ThemeManager.current_theme == "dark" else "dark"
         ThemeManager.set_theme(new_theme)
+        colors = ThemeManager.colors()
+
         self.setStyleSheet(build_stylesheet())
+
+        self.activity_bar.apply_theme(colors)
+        self.toolbar.apply_theme(colors)
+        self.terminal_dock.apply_theme(colors)
+        self.signal_dock.apply_theme(colors)
+
+        self.editor_tabs._style_plus_tab_bar()
+        for tab in self.editor_tabs.tabs.values():
+            tab.editor.apply_theme_from_colors(colors)
+
+        self._refresh_icons()
+
         self.status.showMessage(f"Switched to {new_theme} theme")
 
     def _show_about(self):

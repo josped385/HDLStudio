@@ -7,14 +7,15 @@ class TerminalWidget(QTextEdit):
         super().__init__()
 
         self.setReadOnly(True)
+        self.setPlainText("HDLStudio terminal initialized...\n")
 
-        self.setPlainText(
-            "HDLStudio terminal initialized...\n"
-        )
+        from themes.theme_manager import ThemeManager
+        self.apply_theme(ThemeManager.colors())
 
-        self.setStyleSheet("""
-            background-color: #111111;
-            color: #00ff88;
+    def apply_theme(self, colors):
+        self.setStyleSheet(f"""
+            background-color: {colors["terminal_bg"]};
+            color: {colors["terminal_text"]};
             border: none;
         """)
 

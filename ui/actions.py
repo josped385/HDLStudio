@@ -34,7 +34,7 @@ class IDEActions:
 
         # ---------------- VIEW ----------------
 
-        self.toggle_terminal = QAction("Toggle Terminal", main_window)
+        self.toggle_terminal = QAction(QIcon("assets/icons/terminal.svg"), "Toggle Terminal", main_window)
         self.toggle_terminal.setShortcut(QKeySequence("Ctrl+`"))
 
         self.toggle_explorer = QAction("Toggle Explorer", main_window)

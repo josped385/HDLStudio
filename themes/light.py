@@ -22,5 +22,8 @@ COLORS = {
     "terminal_text": "#008844",
 
     # Accent
-    "accent": "#2a62d5"
+    "accent": "#2a62d5",
+
+    # Borders
+    "border": "#a0a0a0"
 }

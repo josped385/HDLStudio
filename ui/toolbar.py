@@ -1,5 +1,5 @@
 import os
-from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox
+from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox, QWidget, QSizePolicy
 
 
 class MainToolBar(QToolBar):
@@ -31,6 +31,7 @@ class MainToolBar(QToolBar):
         self.addAction(a.compile)
         self.addAction(a.run)
         self.addAction(a.view_waves)
+        self.addAction(a.toggle_terminal)
 
         self.addSeparator()
 
@@ -55,6 +56,20 @@ class MainToolBar(QToolBar):
         self.tb_combo.setPlaceholderText("(auto)")
         self.tb_combo.currentIndexChanged.connect(self._on_tb_changed)
         self.addWidget(self.tb_combo)
+
+        spacer = QWidget()
+        spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
+        self.addWidget(spacer)
+
+        self.addAction(a.toggle_theme)
+
+    def apply_theme(self, colors):
+        css = f"color: {colors['text_secondary']}; padding-left: 4px;"
+        for w in self.findChildren(QLabel):
+            w.setStyleSheet(css)
 
     def _on_module_changed(self, index):
         path = self.module_combo.itemData(index)

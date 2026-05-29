@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QToolBar, QWidget, QSizePolicy
+from PyQt6.QtWidgets import QToolBar
 
 
 class ActivityBar(QToolBar):
@@ -13,31 +13,36 @@ class ActivityBar(QToolBar):
         self.setIconSize(QSize(22, 22))
         self.setFixedWidth(44)
 
-        self.setStyleSheet("""
-            QToolBar {
-                background-color: #252526;
+        self.main = parent
+        self._build()
+
+        from themes.theme_manager import ThemeManager
+        self.apply_theme(ThemeManager.colors())
+
+    def apply_theme(self, colors):
+        self.setStyleSheet(f"""
+            QToolBar {{
+                background-color: {colors["panel_bg"]};
                 border: none;
                 spacing: 0px;
                 padding: 0px;
-            }
-            QToolButton {
+            }}
+            QToolButton {{
                 border: none;
                 border-radius: 0px;
                 padding: 10px 8px;
                 margin: 0px;
                 icon-size: 22px;
-            }
-            QToolButton:hover {
-                background-color: #2a2d2e;
-            }
-            QToolButton:checked {
-                background-color: #37373d;
-                border-left: 2px solid #3d7eff;
-            }
+                color: {colors["text"]};
+            }}
+            QToolButton:hover {{
+                background-color: {colors["panel_hover"]};
+            }}
+            QToolButton:checked {{
+                background-color: {colors["editor_bg"]};
+                border-left: 2px solid {colors["accent"]};
+            }}
         """)
-
-        self.main = parent
-        self._build()
 
     def _build(self):
 
@@ -55,13 +60,6 @@ class ActivityBar(QToolBar):
         )
         self.connections_btn.setCheckable(True)
         self.connections_btn.triggered.connect(self._on_connections)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding
-        )
-        self.addWidget(spacer)
 
     def _on_explorer(self):
         self.explorer_btn.setChecked(True)

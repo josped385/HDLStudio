@@ -30,7 +30,7 @@ QMenu::item:selected {{
 QToolBar {{
     background-color: {c["panel_bg"]};
     spacing: 6px;
-    border: none;
+    border-bottom: 1px solid {c.get("border", c["panel_hover"])};
 }}
 
 QToolTip {{
@@ -41,21 +41,31 @@ QToolTip {{
 
 QDockWidget {{
     color: {c["text"]};
-    titlebar-close-icon: none;
+    border-left: 1px solid {c.get("border", c["panel_hover"])};
 }}
 
 QDockWidget::title {{
     background: {c["panel_bg"]};
+    color: {c["text"]};
     padding: 6px;
+    text-align: left;
+    border-bottom: 1px solid {c.get("border", c["panel_hover"])};
 }}
 
 QStatusBar {{
     background-color: {c["panel_bg"]};
     color: {c["text_secondary"]};
+    border-top: 1px solid {c.get("border", c["panel_hover"])};
 }}
 
 QTabWidget::pane {{
     border: none;
+    border-top: 1px solid {c.get("border", c["panel_hover"])};
+    background: transparent;
+}}
+
+QTabBar {{
+    background: {c["panel_bg"]};
 }}
 
 QTabBar::tab {{
@@ -78,6 +88,7 @@ QTreeView {{
     background-color: {c["main_bg"]};
     color: {c["text"]};
     border: none;
+    border-top: 1px solid {c.get("border", c["panel_hover"])};
 }}
 
 QTreeView::item:hover {{
@@ -87,6 +98,19 @@ QTreeView::item:hover {{
 QTreeView::item:selected {{
     background: {c["accent"]};
     color: {c["text"]};
+}}
+
+QHeaderView {{
+    background-color: {c["panel_bg"]};
+    color: {c["text_secondary"]};
+}}
+
+QHeaderView::section {{
+    background-color: {c["panel_bg"]};
+    color: {c["text_secondary"]};
+    padding: 4px 8px;
+    border: none;
+    font-weight: bold;
 }}
 
 QLineEdit {{
@@ -125,6 +149,48 @@ QTextEdit {{
     background-color: {c["terminal_bg"]};
     color: {c["terminal_text"]};
     border: none;
+}}
+
+QScrollBar:vertical {{
+    background: {c["panel_bg"]};
+    width: 10px;
+    margin: 0;
+}}
+
+QScrollBar::handle:vertical {{
+    background: {c["panel_hover"]};
+    min-height: 20px;
+    border-radius: 4px;
+}}
+
+QScrollBar::handle:vertical:hover {{
+    background: {c["text_secondary"]};
+}}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {{
+    height: 0;
+}}
+
+QScrollBar:horizontal {{
+    background: {c["panel_bg"]};
+    height: 10px;
+    margin: 0;
+}}
+
+QScrollBar::handle:horizontal {{
+    background: {c["panel_hover"]};
+    min-width: 20px;
+    border-radius: 4px;
+}}
+
+QScrollBar::handle:horizontal:hover {{
+    background: {c["text_secondary"]};
+}}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {{
+    width: 0;
 }}
 """
 

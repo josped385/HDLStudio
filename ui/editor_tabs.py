@@ -1,8 +1,58 @@
 import os
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QTabWidget, QMessageBox
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtWidgets import QTabWidget, QTabBar, QMessageBox, QPushButton
 
 from ui.editor_tab import EditorTab
+from themes.theme_manager import ThemeManager
+
+
+class PlusTabBar(QTabBar):
+    plusClicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._plus_btn = QPushButton("+", self)
+        f = QFont("Consolas", 14)
+        f.setBold(True)
+        self._plus_btn.setFont(f)
+        self._plus_btn.setFixedSize(28, 26)
+        self._plus_btn.setFlat(True)
+        self._plus_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        self._plus_btn.clicked.connect(self.plusClicked.emit)
+        self._plus_btn.show()
+
+    def _reposition_plus(self):
+        if self.count() == 0:
+            x = 2
+        else:
+            last_rect = self.tabRect(self.count() - 1)
+            x = last_rect.right() + 2
+        y = (self.height() - self._plus_btn.height()) // 2
+        self._plus_btn.move(x, y)
+        self._plus_btn.raise_()
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._reposition_plus()
+
+    def tabLayoutChange(self):
+        super().tabLayoutChange()
+        self._reposition_plus()
+
+    def style_plus_btn(self, colors):
+        self._plus_btn.setStyleSheet(f"""
+            QPushButton {{
+                color: {colors["text"]};
+                background: transparent;
+                border: none;
+                padding: 0px 4px;
+            }}
+            QPushButton:hover {{
+                color: {colors["accent"]};
+                background: {colors["panel_hover"]};
+            }}
+        """)
 
 
 class EditorTabs(QTabWidget):
@@ -17,12 +67,32 @@ class EditorTabs(QTabWidget):
 
         self.untitled_counter = 0
 
+        self.tabCloseRequested.connect(self.close_tab)
+        self.currentChanged.connect(self._on_tab_changed)
+
+        self._setup_plus_tab_bar()
+
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setDocumentMode(True)
 
-        self.tabCloseRequested.connect(self.close_tab)
-        self.currentChanged.connect(self._on_tab_changed)
+        self._style_plus_tab_bar()
+
+    def _setup_plus_tab_bar(self):
+        bar = PlusTabBar(self)
+        bar.plusClicked.connect(self._on_new_tab)
+        self.setTabBar(bar)
+        self._plus_bar = bar
+
+    def _style_plus_tab_bar(self):
+        c = ThemeManager.colors()
+        self._plus_bar.style_plus_btn(c)
+
+    def _on_new_tab(self):
+        from ui.main_window import MainWindow
+        parent = self.window()
+        if isinstance(parent, MainWindow):
+            parent.new_file()
 
     # ---------------- CURRENT TAB ----------------
 
@@ -72,11 +142,13 @@ class EditorTabs(QTabWidget):
         # ---------------- ADD TAB ----------------
         self.addTab(
             tab.editor,
-            QIcon("assets/icons/file.svg"),
+            QIcon(ThemeManager.icon("file")),
             display_name
         )
 
         self.setCurrentWidget(tab.editor)
+
+        tab.editor.apply_theme_from_colors()
 
     # ---------------- NEW FILE ----------------
 
@@ -94,11 +166,13 @@ class EditorTabs(QTabWidget):
 
         self.addTab(
             tab.editor,
-            QIcon("assets/icons/file.svg"),
+            QIcon(ThemeManager.icon("file")),
             f"untitled-{self.untitled_counter}"
         )
 
         self.setCurrentWidget(tab.editor)
+
+        tab.editor.apply_theme_from_colors()
 
     # ---------------- CLOSE TAB (SAFE) ----------------
 

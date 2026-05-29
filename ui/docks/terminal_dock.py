@@ -36,6 +36,22 @@ class TerminalDock(QDockWidget):
 
         self.output.append("HDLStudio terminal initialized\n")
 
+        from themes.theme_manager import ThemeManager
+        self.apply_theme(ThemeManager.colors())
+
+    def apply_theme(self, colors):
+        self.output.setStyleSheet(f"""
+            background-color: {colors["terminal_bg"]};
+            color: {colors["terminal_text"]};
+            border: none;
+        """)
+        self.input.setStyleSheet(f"""
+            background-color: {colors["panel_bg"]};
+            color: {colors["text"]};
+            border: 1px solid {colors["panel_hover"]};
+            padding: 4px;
+        """)
+
     def execute_command(self):
 
         cmd = self.input.text().strip()

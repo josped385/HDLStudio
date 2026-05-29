@@ -18,7 +18,7 @@ class Style:
     Event        = 11
 
 
-_COLORS = {
+_COLORS_DARK = {
     "default":       "#d4d4d4",
     "keyword":       "#569cd6",
     "type":          "#4ec9b0",
@@ -33,6 +33,21 @@ _COLORS = {
     "event":         "#d7ba7d",
 }
 
+_COLORS_LIGHT = {
+    "default":       "#202020",
+    "keyword":       "#0057a0",
+    "type":          "#008060",
+    "number":        "#098658",
+    "comment":       "#408040",
+    "comment_block": "#408040",
+    "string":        "#a04030",
+    "directive":     "#7030a0",
+    "identifier":    "#606000",
+    "operator":      "#202020",
+    "control":       "#7030a0",
+    "event":         "#806020",
+}
+
 
 class BaseHDLLexer(QsciLexerCustom):
 
@@ -42,6 +57,7 @@ class BaseHDLLexer(QsciLexerCustom):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._current_palette = _COLORS_DARK
         self._setup_styles()
         self._setup_autocompletion()
 
@@ -49,7 +65,7 @@ class BaseHDLLexer(QsciLexerCustom):
         mono = QFont("Consolas", 10)
 
         for style_id, name in self.STYLE_MAP.items():
-            self.setColor(QColor(_COLORS.get(name, "#d4d4d4")), style_id)
+            self.setColor(QColor(self._current_palette.get(name, "#d4d4d4")), style_id)
             self.setFont(mono, style_id)
 
         bold = QFont("Consolas", 10)
@@ -64,6 +80,15 @@ class BaseHDLLexer(QsciLexerCustom):
 
     def _completion_words(self):
         return []
+
+    def apply_theme(self, colors):
+        text = colors.get("text", "#ffffff")
+        r = int(text[1:3], 16)
+        g = int(text[3:5], 16)
+        b = int(text[5:7], 16)
+        is_dark = (r + g + b) // 3 > 128
+        self._current_palette = _COLORS_DARK if is_dark else _COLORS_LIGHT
+        self._setup_styles()
 
     def language(self):
         return "HDL"

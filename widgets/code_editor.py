@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.Qsci import QsciScintilla
+from PyQt6.Qsci import QsciScintilla, QsciScintillaBase
 from PyQt6.QtCore import pyqtSignal
 
 from widgets.lexers import VerilogLexer, VHDLLexer
@@ -14,6 +14,7 @@ class CodeEditor(QsciScintilla):
         super().__init__()
 
         self._lexer = None
+        self._theme_applied = False
         self._setup_editor()
         self._setup_autocompletion()
 
@@ -21,45 +22,65 @@ class CodeEditor(QsciScintilla):
             self._on_cursor_changed
         )
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._theme_applied:
+            self._theme_applied = True
+            self._force_apply_theme()
+
+    def _force_apply_theme(self):
+        from themes.theme_manager import ThemeManager
+        self._apply_colors_direct(ThemeManager.colors())
+
+    def _apply_colors_direct(self, colors):
+        bg = QColor(colors["editor_bg"])
+        fg = QColor(colors["editor_text"])
+        sel = QColor(colors["editor_selection"])
+        line_hl = QColor(colors["editor_line_highlight"])
+        margin_bg = QColor(colors["editor_margin_bg"])
+        margin_fg = QColor(colors["text_secondary"])
+        edge = QColor(colors["editor_edge"])
+
+        if self._lexer:
+            self._lexer.apply_theme(colors)
+            self.setLexer(self._lexer)
+
+        for style_id in range(33):
+            self.SendScintilla(QsciScintillaBase.SCI_STYLESETBACK, style_id, bg)
+            self.SendScintilla(QsciScintillaBase.SCI_STYLESETFORE, style_id, fg)
+
+        self.SendScintilla(QsciScintillaBase.SCI_SETSELFORE, 1, sel)
+        self.SendScintilla(QsciScintillaBase.SCI_SETSELBACK, 1, sel)
+        self.SendScintilla(QsciScintillaBase.SCI_SETCARETFORE, fg)
+        self.SendScintilla(QsciScintillaBase.SCI_SETCARETLINEBACK, line_hl)
+        self.SendScintilla(QsciScintillaBase.SCI_SETCARETLINEVISIBLE, 1)
+
+        self.SendScintilla(QsciScintillaBase.SCI_STYLESETBACK, 33, margin_bg)
+        self.SendScintilla(QsciScintillaBase.SCI_STYLESETFORE, 33, margin_fg)
+        self.SendScintilla(QsciScintillaBase.SCI_SETEDGECOLOUR, edge)
+
+        if self._lexer:
+            self._lexer.apply_theme(colors)
+
     def _setup_editor(self):
 
         self.setUtf8(True)
+        self.setFont(QFont("Consolas", 10))
+        self.setMarginsFont(QFont("Consolas", 10))
 
-        font = QFont("Consolas", 10)
-        font.setStyleHint(QFont.StyleHint.Monospace)
-        self.setFont(font)
-        self.setMarginsFont(font)
-
-        self.setMarginType(
-            0,
-            QsciScintilla.MarginType.NumberMargin
-        )
-
+        self.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
         self.setMarginWidth(0, "00000")
-
-        self.setMarginsBackgroundColor(QColor("#2b2b2b"))
-        self.setMarginsForegroundColor(QColor("#aaaaaa"))
-
-        self.setCaretLineVisible(True)
-        self.setCaretLineBackgroundColor(QColor("#2f2f2f"))
-
-        self.setCaretForegroundColor(QColor("#ffffff"))
 
         self.setIndentationsUseTabs(False)
         self.setIndentationWidth(4)
         self.setAutoIndent(True)
         self.setTabWidth(4)
 
-        self.setSelectionBackgroundColor(QColor("#264f78"))
-
-        self.setPaper(QColor("#1e1e1e"))
-        self.setColor(QColor("#dcdcdc"))
-
         self.setEdgeMode(QsciScintilla.EdgeMode.EdgeLine)
         self.setEdgeColumn(100)
-        self.setEdgeColor(QColor("#333333"))
-
         self.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
+
+        self._force_apply_theme()
 
     def _setup_autocompletion(self):
 
@@ -69,6 +90,14 @@ class CodeEditor(QsciScintilla):
         self.setAutoCompletionThreshold(2)
         self.setAutoCompletionCaseSensitivity(False)
         self.setAutoCompletionReplaceWord(True)
+
+    def apply_theme_from_colors(self, colors=None):
+
+        if colors is None:
+            from themes.theme_manager import ThemeManager
+            colors = ThemeManager.colors()
+
+        self._apply_colors_direct(colors)
 
     def set_lexer_for_file(self, filepath):
 
@@ -87,15 +116,7 @@ class CodeEditor(QsciScintilla):
         else:
             return
 
-        self.setLexer(self._lexer)
-
-    def update_lexer_styles(self):
-
-        self.setPaper(QColor("#1e1e1e"))
-        self.setColor(QColor("#dcdcdc"))
-
-        if self._lexer:
-            self.setLexer(self._lexer)
+        self._force_apply_theme()
 
     def _remove_lexer(self):
 

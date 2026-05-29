@@ -21,8 +21,9 @@ class SignalDock(QDockWidget):
             | QDockWidget.DockWidgetFeature.DockWidgetMovable
         )
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
+        self.container = QWidget()
+        self.container.setObjectName("signalDockContainer")
+        layout = QVBoxLayout(self.container)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tree = SignalTree()
@@ -30,11 +31,22 @@ class SignalDock(QDockWidget):
 
         self.info_label = QLabel("No file open")
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.info_label.setStyleSheet("color: #888888; padding: 20px;")
         layout.addWidget(self.info_label)
         self.info_label.hide()
 
-        self.setWidget(container)
+        self.setWidget(self.container)
+
+        from themes.theme_manager import ThemeManager
+        self.apply_theme(ThemeManager.colors())
+
+    def apply_theme(self, colors):
+        self.container.setStyleSheet(
+            f"#signalDockContainer {{ background-color: {colors['main_bg']}; }}"
+        )
+        self.tree.apply_theme(colors)
+        self.info_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; padding: 20px;"
+        )
 
     def update_from_file(self, filepath):
         if not filepath or not os.path.isfile(filepath):
