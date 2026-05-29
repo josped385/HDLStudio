@@ -175,10 +175,24 @@ class EditorTabs(QTabWidget):
         # status bar update
         self.parent().status.file_label.setText(tab.filename)
 
-        # cursor tracking connect (safe, no disconnect hack)
+        # disconnect previous editor's cursor signal to avoid leaks
+        if hasattr(self, '_prev_cursor_tab') and self._prev_cursor_tab is not None:
+            try:
+                self._prev_cursor_tab.editor.cursor_position_changed.disconnect(
+                    self._emit_cursor_change
+                )
+            except TypeError:
+                pass
+
+        # connect current editor's cursor signal
         tab.editor.cursor_position_changed.connect(
             self._emit_cursor_change
         )
+        self._prev_cursor_tab = tab
+
+        # emit initial cursor position
+        line, col = tab.editor.getCursorPosition()
+        self._emit_cursor_change(line + 1, col + 1)
 
     def _emit_cursor_change(self, line, col):
 

@@ -7,11 +7,12 @@ from ui.docks.terminal_dock import TerminalDock
 from ui.editor_tabs import EditorTabs
 from ui.panels.status_bar import IDEStatusBar
 from ui.toolbar import MainToolBar
-from ui.styles import MAIN_STYLE
+from ui.styles import MAIN_STYLE, build_stylesheet
 
 from core.project import Project
 
 from ui.actions import IDEActions
+from themes.theme_manager import ThemeManager
 
 class MainWindow(QMainWindow):
 
@@ -69,9 +70,14 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self.ide_actions.toggle_terminal)
         view_menu.addAction(self.ide_actions.toggle_explorer)
 
+        # VIEW
+        view_menu.addSeparator()
+        view_menu.addAction(self.ide_actions.toggle_theme)
+
         # HELP
         help_menu = menu.addMenu("Help")
-        help_menu.addAction("About")
+        about_action = help_menu.addAction("About")
+        about_action.triggered.connect(self._show_about)
 
     # ---------------- EDITOR ----------------
 
@@ -235,6 +241,18 @@ class MainWindow(QMainWindow):
 
     # ---------------- BUILD SYSTEM (STUBS) ----------------
 
+    def _collect_hdl_files(self):
+
+        if not self.project or not self.project.is_loaded():
+            return []
+
+        import glob as globmod
+        hdl_files = []
+        for ext in ("**/*.v", "**/*.sv", "**/*.vhd", "**/*.vhdl"):
+            pattern = self.project.to_absolute(ext)
+            hdl_files.extend(globmod.glob(pattern, recursive=True))
+        return sorted(hdl_files)
+
     def compile_project(self):
 
         if not self.project or not self.project.is_loaded():
@@ -243,8 +261,22 @@ class MainWindow(QMainWindow):
 
         self.status.showMessage("Compiling project...")
 
-        # TODO: real HDL pipeline (ghdl/verilator)
-        self.terminal_dock.terminal.append("Compile not implemented yet\n")
+        files = self._collect_hdl_files()
+        if files:
+            self.terminal_dock.output.append(
+                f"Found {len(files)} HDL file(s) for compilation:\n"
+            )
+            for f in files:
+                rel = self.project.to_relative(f)
+                self.terminal_dock.output.append(f"  {rel}\n")
+            self.terminal_dock.output.append(
+                "Compilation pipeline not yet configured.\n"
+                "Install a simulator (iverilog/ghdl/verilator) to enable compilation.\n"
+            )
+        else:
+            self.terminal_dock.output.append(
+                "No HDL files found in project.\n"
+            )
 
     def run_project(self):
 
@@ -254,7 +286,16 @@ class MainWindow(QMainWindow):
 
         self.status.showMessage("Running simulation...")
 
-        self.terminal_dock.terminal.append("Run not implemented yet\n")
+        files = self._collect_hdl_files()
+        if files:
+            self.terminal_dock.output.append(
+                f"Run pipeline not yet configured.\n"
+                f"Found {len(files)} HDL file(s) - compile before running.\n"
+            )
+        else:
+            self.terminal_dock.output.append(
+                "No HDL files found in project.\n"
+            )
 
     def toggle_terminal(self):
 
@@ -265,3 +306,20 @@ class MainWindow(QMainWindow):
 
         visible = self.file_explorer_dock.isVisible()
         self.file_explorer_dock.setVisible(not visible)
+
+    def toggle_theme(self):
+
+        new_theme = "light" if ThemeManager.current_theme == "dark" else "dark"
+        ThemeManager.set_theme(new_theme)
+        self.setStyleSheet(build_stylesheet())
+        self.status.showMessage(f"Switched to {new_theme} theme")
+
+    def _show_about(self):
+
+        QMessageBox.about(
+            self,
+            "About HDLStudio",
+            "HDLStudio v0.1.0\n\n"
+            "A lightweight IDE for HDL development.\n"
+            "Supports Verilog, SystemVerilog, and VHDL."
+        )

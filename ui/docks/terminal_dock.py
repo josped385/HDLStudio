@@ -16,31 +16,25 @@ class TerminalDock(QDockWidget):
 
         self.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
 
-        # UI
         self.container = QWidget()
         self.layout = QVBoxLayout(self.container)
+        self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.output = QTextEdit()
         self.output.setReadOnly(True)
 
         self.input = QLineEdit()
+        self.input.setPlaceholderText("Enter command...")
 
         self.layout.addWidget(self.output)
         self.layout.addWidget(self.input)
 
         self.setWidget(self.container)
 
-        # process (SAFE MODE)
-        self.process = QProcess(self)
-
-        self.process.readyReadStandardOutput.connect(self.read_stdout)
-        self.process.readyReadStandardError.connect(self.read_stderr)
-
+        self._process = None
         self.input.returnPressed.connect(self.execute_command)
 
-        self.output.append("HDLStudio terminal initialized (safe mode)\n")
-
-    # ---------------- EXECUTION ----------------
+        self.output.append("HDLStudio terminal initialized\n")
 
     def execute_command(self):
 
@@ -49,24 +43,40 @@ class TerminalDock(QDockWidget):
         if not cmd:
             return
 
-        self.output.append(f"> {cmd}")
-
+        self.output.append(f"> {cmd}\n")
         self.input.clear()
 
-        # safer: run detached process per command
-        if os.name == "nt":
-            self.process.start("cmd.exe", ["/C", cmd])
-        else:
-            self.process.start("bash", ["-c", cmd])
+        if self._process and self._process.state() == QProcess.ProcessState.Running:
+            self._process.kill()
+            self._process.waitForFinished(1000)
 
-    # ---------------- OUTPUT ----------------
+        self._process = QProcess(self)
+        self._process.readyReadStandardOutput.connect(self.read_stdout)
+        self._process.readyReadStandardError.connect(self.read_stderr)
+        self._process.finished.connect(self._on_finished)
+
+        if os.name == "nt":
+            self._process.start("cmd.exe", ["/C", cmd])
+        else:
+            self._process.start("bash", ["-c", cmd])
 
     def read_stdout(self):
 
-        data = self.process.readAllStandardOutput().data().decode()
+        data = self._process.readAllStandardOutput().data().decode(errors="replace")
         self.output.append(data)
 
     def read_stderr(self):
 
-        data = self.process.readAllStandardError().data().decode()
+        data = self._process.readAllStandardError().data().decode(errors="replace")
         self.output.append(f"[ERR] {data}")
+
+    def _on_finished(self, exit_code, exit_status):
+
+        if exit_code != 0:
+            self.output.append(f"\nProcess exited with code {exit_code}\n")
+        else:
+            self.output.append("\n")
+
+    def clear(self):
+
+        self.output.clear()

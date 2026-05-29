@@ -1,33 +1,107 @@
-MAIN_STYLE = """
-QMainWindow {
-    background-color: #202124;
-}
+from themes.theme_manager import ThemeManager
 
-QMenuBar {
-    background-color: #2b2b2b;
-    color: white;
-}
 
-QMenuBar::item:selected {
-    background: #3c3f41;
-}
+def build_stylesheet():
+    c = ThemeManager.colors()
 
-QMenu {
-    background-color: #2b2b2b;
-    color: white;
-}
+    return f"""
+QMainWindow {{
+    background-color: {c["main_bg"]};
+}}
 
-QToolBar {
-    background-color: #2b2b2b;
+QMenuBar {{
+    background-color: {c["panel_bg"]};
+    color: {c["text"]};
+}}
+
+QMenuBar::item:selected {{
+    background: {c["panel_hover"]};
+}}
+
+QMenu {{
+    background-color: {c["panel_bg"]};
+    color: {c["text"]};
+}}
+
+QMenu::item:selected {{
+    background: {c["panel_hover"]};
+}}
+
+QToolBar {{
+    background-color: {c["panel_bg"]};
     spacing: 6px;
     border: none;
-}
+}}
 
-QDockWidget {
-    color: white;
-}
+QToolTip {{
+    background-color: {c["panel_bg"]};
+    color: {c["text"]};
+    border: 1px solid {c["panel_hover"]};
+}}
 
-QTabWidget::pane {
+QDockWidget {{
+    color: {c["text"]};
+    titlebar-close-icon: none;
+}}
+
+QDockWidget::title {{
+    background: {c["panel_bg"]};
+    padding: 6px;
+}}
+
+QStatusBar {{
+    background-color: {c["panel_bg"]};
+    color: {c["text_secondary"]};
+}}
+
+QTabWidget::pane {{
     border: none;
-}
+}}
+
+QTabBar::tab {{
+    background: {c["panel_bg"]};
+    color: {c["text"]};
+    padding: 6px 14px;
+    border: none;
+}}
+
+QTabBar::tab:selected {{
+    background: {c["editor_bg"]};
+    border-bottom: 2px solid {c["accent"]};
+}}
+
+QTabBar::tab:hover:!selected {{
+    background: {c["panel_hover"]};
+}}
+
+QTreeView {{
+    background-color: {c["main_bg"]};
+    color: {c["text"]};
+    border: none;
+}}
+
+QTreeView::item:hover {{
+    background: {c["panel_hover"]};
+}}
+
+QTreeView::item:selected {{
+    background: {c["accent"]};
+    color: {c["text"]};
+}}
+
+QLineEdit {{
+    background-color: {c["editor_bg"]};
+    color: {c["text"]};
+    border: 1px solid {c["panel_hover"]};
+    padding: 4px;
+}}
+
+QTextEdit {{
+    background-color: {c["terminal_bg"]};
+    color: {c["terminal_text"]};
+    border: none;
+}}
 """
+
+
+MAIN_STYLE = build_stylesheet()
