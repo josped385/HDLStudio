@@ -1,3 +1,4 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 
 
@@ -47,6 +48,7 @@ class IDEActions:
 
         self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
         self.toggle_theme.setShortcut(QKeySequence("Ctrl+Shift+T"))
+        self.toggle_theme.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
 
         # ---------------- CONNECTIONS ----------------
 

@@ -1,8 +1,8 @@
 import os
 
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox
+from PyQt6.QtCore import Qt, QSize, QEvent
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
+from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
 
 from ui.docks.file_explorer_dock import FileExplorerDock
 from ui.docks.signal_dock import SignalDock
@@ -43,6 +43,8 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._warn_if_no_iverilog()
         self._refresh_icons()
+
+        QApplication.instance().installEventFilter(self)
 
     # ---------------- UI ----------------
 
@@ -469,6 +471,17 @@ class MainWindow(QMainWindow):
         self._refresh_icons()
 
         self.status.showMessage(f"Switched to {new_theme} theme")
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyPress:
+            mods = event.modifiers()
+            if (event.key() == Qt.Key.Key_T
+                    and mods & Qt.KeyboardModifier.ControlModifier
+                    and mods & Qt.KeyboardModifier.ShiftModifier
+                    and not (mods & Qt.KeyboardModifier.AltModifier)):
+                self.toggle_theme()
+                return True
+        return super().eventFilter(obj, event)
 
     def _show_about(self):
 
