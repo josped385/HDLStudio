@@ -1,6 +1,9 @@
+import os
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.Qsci import QsciScintilla
 from PyQt6.QtCore import pyqtSignal
+
+from widgets.lexers import VerilogLexer, VHDLLexer
 
 
 class CodeEditor(QsciScintilla):
@@ -10,7 +13,9 @@ class CodeEditor(QsciScintilla):
     def __init__(self):
         super().__init__()
 
+        self._lexer = None
         self._setup_editor()
+        self._setup_autocompletion()
 
         self.cursorPositionChanged.connect(
             self._on_cursor_changed
@@ -55,6 +60,48 @@ class CodeEditor(QsciScintilla):
         self.setEdgeColor(QColor("#333333"))
 
         self.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
+
+    def _setup_autocompletion(self):
+
+        self.setAutoCompletionSource(
+            QsciScintilla.AutoCompletionSource.AcsAll
+        )
+        self.setAutoCompletionThreshold(2)
+        self.setAutoCompletionCaseSensitivity(False)
+        self.setAutoCompletionReplaceWord(True)
+
+    def set_lexer_for_file(self, filepath):
+
+        self._remove_lexer()
+
+        if not filepath:
+            return
+
+        _, ext = os.path.splitext(filepath)
+        ext = ext.lower()
+
+        if ext in (".v", ".sv"):
+            self._lexer = VerilogLexer(self)
+        elif ext == ".vhd":
+            self._lexer = VHDLLexer(self)
+        else:
+            return
+
+        self.setLexer(self._lexer)
+
+    def update_lexer_styles(self):
+
+        self.setPaper(QColor("#1e1e1e"))
+        self.setColor(QColor("#dcdcdc"))
+
+        if self._lexer:
+            self.setLexer(self._lexer)
+
+    def _remove_lexer(self):
+
+        if self._lexer is not None:
+            self.setLexer(None)
+            self._lexer = None
 
     def _on_cursor_changed(self, line, index):
 

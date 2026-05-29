@@ -40,6 +40,7 @@ class EditorTab(QObject):
         with open(self.path, "r", encoding="utf-8") as f:
             content = f.read()
 
+        self.editor.set_lexer_for_file(self.path)
         self.editor.blockSignals(True)
         self.editor.setText(content)
         self.editor.blockSignals(False)
@@ -62,6 +63,7 @@ class EditorTab(QObject):
             return False
 
         self.path = new_path
+        self.editor.set_lexer_for_file(self.path)
         self._write_to_disk(self.path)
         self._set_modified(False)
 
