@@ -3,10 +3,12 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox
 
 from ui.docks.file_explorer_dock import FileExplorerDock
+from ui.docks.signal_dock import SignalDock
 from ui.docks.terminal_dock import TerminalDock
 from ui.editor_tabs import EditorTabs
 from ui.panels.status_bar import IDEStatusBar
 from ui.toolbar import MainToolBar
+from ui.activity_bar import ActivityBar
 from ui.styles import MAIN_STYLE, build_stylesheet
 
 from core.project import Project
@@ -44,7 +46,9 @@ class MainWindow(QMainWindow):
         self._setup_menu_bar()
         self._setup_editor()
         self._setup_toolbar()
+        self._setup_activity_bar()
         self._setup_file_explorer()
+        self._setup_connections()
         self._setup_terminal()
         self._setup_status_bar()
 
@@ -54,7 +58,6 @@ class MainWindow(QMainWindow):
 
         menu = self.menuBar()
 
-        # FILE
         file_menu = menu.addMenu("File")
         file_menu.addAction(self.ide_actions.new_file)
         file_menu.addAction(self.ide_actions.open_file)
@@ -64,21 +67,17 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.ide_actions.save)
         file_menu.addAction(self.ide_actions.save_as)
 
-        # BUILD
         build_menu = menu.addMenu("Build")
         build_menu.addAction(self.ide_actions.compile)
         build_menu.addAction(self.ide_actions.run)
 
-        # VIEW
         view_menu = menu.addMenu("View")
         view_menu.addAction(self.ide_actions.toggle_terminal)
         view_menu.addAction(self.ide_actions.toggle_explorer)
 
-        # VIEW
         view_menu.addSeparator()
         view_menu.addAction(self.ide_actions.toggle_theme)
 
-        # HELP
         help_menu = menu.addMenu("Help")
         about_action = help_menu.addAction("About")
         about_action.triggered.connect(self._show_about)
@@ -89,6 +88,7 @@ class MainWindow(QMainWindow):
 
         self.editor_tabs = EditorTabs()
         self.setCentralWidget(self.editor_tabs)
+        self.editor_tabs.currentChanged.connect(self._on_tab_changed)
 
     # ---------------- TOOLBAR ----------------
 
@@ -96,6 +96,24 @@ class MainWindow(QMainWindow):
 
         self.toolbar = MainToolBar(self)
         self.addToolBar(self.toolbar)
+
+    # ---------------- ACTIVITY BAR ----------------
+
+    def _setup_activity_bar(self):
+
+        self.activity_bar = ActivityBar(self)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.activity_bar)
+
+    def _show_activity_panel(self, panel):
+
+        if panel == "explorer":
+            self.signal_dock.hide()
+            self.file_explorer_dock.show()
+            self.file_explorer_dock.raise_()
+        else:
+            self.file_explorer_dock.hide()
+            self.signal_dock.show()
+            self.signal_dock.raise_()
 
     # ---------------- FILE EXPLORER ----------------
 
@@ -111,6 +129,19 @@ class MainWindow(QMainWindow):
         self.file_explorer_dock.explorer.file_open_requested.connect(
             self.open_project_file
         )
+
+    # ---------------- CONNECTIONS ----------------
+
+    def _setup_connections(self):
+
+        self.signal_dock = SignalDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.signal_dock
+        )
+
+        self.signal_dock.hide()
 
     # ---------------- TERMINAL ----------------
 
@@ -129,6 +160,16 @@ class MainWindow(QMainWindow):
 
         self.status = IDEStatusBar()
         self.setStatusBar(self.status)
+
+    # ---------------- TAB CHANGE ----------------
+
+    def _on_tab_changed(self, index):
+
+        tab = self.editor_tabs.current_tab()
+        if tab and tab.path:
+            self.signal_dock.update_from_file(tab.path)
+        else:
+            self.signal_dock.update_from_file(None)
 
     # ---------------- FILE CONTEXT ----------------
 
@@ -149,6 +190,7 @@ class MainWindow(QMainWindow):
 
         self.build_system.auto_select_files()
         self.toolbar.refresh_file_lists()
+        self.signal_dock.update_from_file(filepath)
 
     # ---------------- ACTIONS ----------------
 
@@ -184,6 +226,7 @@ class MainWindow(QMainWindow):
             return
 
         tab.save()
+        self.signal_dock.update_from_file(tab.path)
 
     def new_file(self):
 
@@ -210,8 +253,6 @@ class MainWindow(QMainWindow):
         self._refresh_build_context(path)
 
     def open_folder(self):
-
-        from PyQt6.QtWidgets import QFileDialog
 
         path = QFileDialog.getExistingDirectory(
             self,
@@ -296,7 +337,7 @@ class MainWindow(QMainWindow):
         self._refresh_build_context()
 
         self.status.showMessage("Compiling...")
-        self.terminal_dock.output.append("═" * 50 + "\n")
+        self.terminal_dock.output.append("=" * 50 + "\n")
         self.terminal_dock.output.append(">> COMPILING\n\n")
 
         def write(text):
@@ -313,7 +354,7 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
 
         self.status.showMessage("Running...")
-        self.terminal_dock.output.append("═" * 50 + "\n")
+        self.terminal_dock.output.append("=" * 50 + "\n")
         self.terminal_dock.output.append(">> RUNNING SIMULATION\n\n")
 
         def write(text):
@@ -333,7 +374,11 @@ class MainWindow(QMainWindow):
     def toggle_explorer(self):
 
         visible = self.file_explorer_dock.isVisible()
-        self.file_explorer_dock.setVisible(not visible)
+        if visible:
+            self.file_explorer_dock.hide()
+            self.activity_bar.explorer_btn.setChecked(False)
+        else:
+            self._show_activity_panel("explorer")
 
     def toggle_theme(self):
 
