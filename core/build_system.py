@@ -85,7 +85,7 @@ class BuildSystem:
             self.module_file = module_candidates[0] if module_candidates else files[0]
             self.testbench_file = files[1] if len(files) > 1 else None
 
-    def compile(self, terminal_callback):
+    def compile(self, terminal_callback, output_path=None):
         root = self.root_dir
         if not root:
             terminal_callback("No project or file open.\n")
@@ -111,9 +111,14 @@ class BuildSystem:
                 terminal_callback("No HDL files found.\n")
                 return False
 
-        build_dir = os.path.join(root, self.build_dir_name)
-        os.makedirs(build_dir, exist_ok=True)
-        output_path = os.path.join(build_dir, self.output_name)
+        if output_path:
+            out_dir = os.path.dirname(output_path)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
+        else:
+            build_dir = os.path.join(root, self.build_dir_name)
+            os.makedirs(build_dir, exist_ok=True)
+            output_path = os.path.join(build_dir, self.output_name)
 
         cmd = [self._iverilog_path, "-o", output_path, "-g2012"] + sources
         terminal_callback(f"{' '.join(cmd)}\n\n")
@@ -141,7 +146,8 @@ class BuildSystem:
             terminal_callback(result.stderr)
 
         if result.returncode == 0:
-            terminal_callback(f"\nCompilation successful -> {self.output_name}\n")
+            name = os.path.basename(output_path)
+            terminal_callback(f"\nCompilation successful -> {name}\n")
             return True
 
         terminal_callback(f"\nCompilation failed (exit code {result.returncode})\n")
@@ -165,7 +171,7 @@ class BuildSystem:
             return None
         return max(files, key=os.path.getmtime)
 
-    def run(self, terminal_callback):
+    def run(self, terminal_callback, vvp_path=None):
         root = self.root_dir
         if not root:
             terminal_callback("No project or file open.\n")
@@ -176,13 +182,15 @@ class BuildSystem:
             return False
 
         build_dir = os.path.join(root, self.build_dir_name)
-        output_path = os.path.join(build_dir, self.output_name)
 
-        if not os.path.isfile(output_path):
+        if not vvp_path:
+            vvp_path = os.path.join(build_dir, self.output_name)
+
+        if not os.path.isfile(vvp_path):
             terminal_callback("No compiled simulation found. Compile first.\n")
             return False
 
-        cmd = [self._vvp_path, output_path]
+        cmd = [self._vvp_path, vvp_path]
         terminal_callback(f"{' '.join(cmd)}\n\n")
 
         env = os.environ.copy()
@@ -214,20 +222,6 @@ class BuildSystem:
             if not self.last_vcd_path:
                 self.last_vcd_path = self._latest_dump(build_dir)
 
-            if self.last_vcd_path:
-                terminal_callback(
-                    f"\n>> Waveform: {os.path.basename(self.last_vcd_path)}\n"
-                    f"   Press F7 or click View Waves to open\n"
-                )
-            else:
-                terminal_callback(
-                    "\n>> No waveform (.vcd) generated.\n"
-                    "   Make sure your testbench includes:\n"
-                    '     initial begin\n'
-                    '         $dumpfile("dump.vcd");\n'
-                    '         $dumpvars(0, testbench_name);\n'
-                    '     end\n'
-                )
             return True
 
         terminal_callback(f"Simulation exited with code {result.returncode}\n")

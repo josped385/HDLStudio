@@ -345,6 +345,14 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
         self._refresh_build_context()
 
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save compiled simulation as",
+            "build/simulation.vvp",
+            "VVP files (*.vvp);;All Files (*)"
+        )
+        if not path:
+            return
+
         self.status.showMessage("Compiling...")
         self.terminal_dock.output.append("=" * 50 + "\n")
         self.terminal_dock.output.append(">> COMPILING\n\n")
@@ -352,7 +360,7 @@ class MainWindow(QMainWindow):
         def write(text):
             self.terminal_dock.output.append(text)
 
-        ok = self.build_system.compile(write)
+        ok = self.build_system.compile(write, output_path=path)
 
         self.status.showMessage(
             "Compilation successful" if ok else "Compilation failed"
@@ -363,6 +371,22 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
         self._refresh_build_context()
 
+        vvp_path, _ = QFileDialog.getOpenFileName(
+            self, "Select simulation to run",
+            "build/",
+            "VVP files (*.vvp);;All Files (*)"
+        )
+        if not vvp_path:
+            return
+
+        vcd_path, _ = QFileDialog.getSaveFileName(
+            self, "Save waveform as",
+            "waves.vcd",
+            "VCD files (*.vcd);;FST files (*.fst);;All Files (*)"
+        )
+        if not vcd_path:
+            return
+
         self.status.showMessage("Running...")
         self.terminal_dock.output.append("=" * 50 + "\n")
         self.terminal_dock.output.append(">> RUNNING SIMULATION\n\n")
@@ -370,7 +394,20 @@ class MainWindow(QMainWindow):
         def write(text):
             self.terminal_dock.output.append(text)
 
-        ok = self.build_system.run(write)
+        ok = self.build_system.run(write, vvp_path=vvp_path)
+
+        if ok:
+            generated = self.build_system.last_vcd_path
+            if generated and os.path.isfile(generated):
+                os.makedirs(os.path.dirname(vcd_path), exist_ok=True)
+                try:
+                    if os.path.normpath(generated) != os.path.normpath(vcd_path):
+                        os.replace(generated, vcd_path)
+                    self.build_system.last_vcd_path = vcd_path
+                    write(f"\n>> Waveform saved as: {os.path.basename(vcd_path)}\n")
+                    write(f"   Press F7 to open in GTKWave\n")
+                except OSError as e:
+                    write(f"\n>> Could not rename waveform: {e}\n")
 
         self.status.showMessage(
             "Simulation finished" if ok else "Simulation failed"
@@ -384,23 +421,12 @@ class MainWindow(QMainWindow):
             )
             return
 
-        vcd = self.build_system.last_vcd_path
-
-        if not vcd or not os.path.isfile(vcd):
-            root = self.build_system.root_dir
-            if root:
-                from core.wave_viewer import find_wave_files
-                all_waves = find_wave_files(root)
-                if not all_waves:
-                    all_waves = find_wave_files(
-                        os.path.join(root, self.build_system.build_dir_name)
-                    )
-                vcd = max(all_waves, key=os.path.getmtime) if all_waves else None
-
+        vcd, _ = QFileDialog.getOpenFileName(
+            self, "Open waveform",
+            "",
+            "Waveform files (*.vcd *.fst *.lxt *.lxt2 *.ghw);;All Files (*)"
+        )
         if not vcd:
-            self.status.showMessage(
-                "No waveform file found — run simulation first (F5 → F6)"
-            )
             return
 
         ok = self.wave_viewer.open(vcd)
