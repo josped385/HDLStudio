@@ -135,9 +135,11 @@ class MainWindow(QMainWindow):
             self.file_explorer_dock
         )
 
-        self.file_explorer_dock.explorer.file_open_requested.connect(
-            self.open_project_file
-        )
+        explorer = self.file_explorer_dock.explorer
+        explorer.file_open_requested.connect(self.open_project_file)
+        explorer.compile_requested.connect(self.compile_file)
+        explorer.run_requested.connect(self.run_file)
+        explorer.wave_requested.connect(self.open_wave_file)
 
     # ---------------- CONNECTIONS ----------------
 
@@ -222,6 +224,78 @@ class MainWindow(QMainWindow):
 
         self.editor_tabs.open_file(path)
         self._refresh_build_context(path)
+
+    def compile_file(self, path):
+        self._ensure_files_saved()
+        self._refresh_build_context(path)
+
+        base = os.path.splitext(os.path.basename(path))[0]
+        default = f"build/{base}.vvp"
+
+        vvp_path, _ = QFileDialog.getSaveFileName(
+            self, f"Compile {os.path.basename(path)}",
+            default,
+            "VVP files (*.vvp);;All Files (*)"
+        )
+        if not vvp_path:
+            return
+
+        self.status.showMessage("Compiling...")
+        self.terminal_dock.output.append("=" * 50 + "\n")
+        self.terminal_dock.output.append(f">> COMPILING: {os.path.basename(path)}\n\n")
+
+        def write(text):
+            self.terminal_dock.output.append(text)
+
+        ok = self.build_system.compile(write, output_path=vvp_path)
+        self.status.showMessage("Compilation successful" if ok else "Compilation failed")
+
+    def run_file(self, path):
+        self._ensure_files_saved()
+        self._refresh_build_context()
+
+        vcd_path, _ = QFileDialog.getSaveFileName(
+            self, f"Run {os.path.basename(path)}",
+            "waves.vcd",
+            "VCD files (*.vcd);;FST files (*.fst);;All Files (*)"
+        )
+        if not vcd_path:
+            return
+
+        self.status.showMessage("Running...")
+        self.terminal_dock.output.append("=" * 50 + "\n")
+        self.terminal_dock.output.append(f">> RUNNING: {os.path.basename(path)}\n\n")
+
+        def write(text):
+            self.terminal_dock.output.append(text)
+
+        ok = self.build_system.run(write, vvp_path=path)
+
+        if ok:
+            generated = self.build_system.last_vcd_path
+            if generated and os.path.isfile(generated):
+                os.makedirs(os.path.dirname(vcd_path), exist_ok=True)
+                try:
+                    if os.path.normpath(generated) != os.path.normpath(vcd_path):
+                        os.replace(generated, vcd_path)
+                    self.build_system.last_vcd_path = vcd_path
+                    write(f"\n>> Waveform saved as: {os.path.basename(vcd_path)}\n")
+                    write(f"   Press F7 to open in GTKWave\n")
+                except OSError as e:
+                    write(f"\n>> Could not rename waveform: {e}\n")
+
+        self.status.showMessage("Simulation finished" if ok else "Simulation failed")
+
+    def open_wave_file(self, path):
+        if not self.wave_viewer.available:
+            self.status.showMessage("GTKWave not found — check gtkwave/bin/gtkwave.exe")
+            return
+
+        ok = self.wave_viewer.open(path)
+        if ok:
+            self.status.showMessage(f"GTKWave: {os.path.basename(path)}")
+        else:
+            self.status.showMessage("Failed to launch GTKWave")
 
     def save_current_file(self):
 
