@@ -1,4 +1,5 @@
 import os
+import re
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.Qsci import QsciScintilla, QsciScintillaBase
 from PyQt6.QtCore import pyqtSignal, Qt, QPoint, QTimer
@@ -170,9 +171,10 @@ class _TooltipPopup(QFrame):
         self._label = QLabel(self)
         self._label.setWordWrap(False)
         self._label.setTextFormat(Qt.TextFormat.RichText)
+        self._label.setContentsMargins(0, 0, 0, 0)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self._label)
         self.setLayout(layout)
@@ -195,8 +197,9 @@ class _TooltipPopup(QFrame):
                 border-radius: 4px;
             }}
             QLabel {{
-                background-color: transparent;
+                background-color: {bg};
                 color: {fg};
+                padding: 8px 12px;
                 font-family: {font_family}, Consolas, monospace;
                 font-size: {font_size};
             }}
@@ -239,6 +242,7 @@ class CodeEditor(QsciScintilla):
         self._hover_language = None
         self._cached_lines = []
         self._cached_margin_w = 0
+        self._cached_text_start_x = 0
         self._last_tip_word = None
         self._tip_popup = None
 
@@ -259,35 +263,39 @@ class CodeEditor(QsciScintilla):
     def _cache_doc_lines(self):
         self._cached_lines = self.text().split("\n")
         self._cached_margin_w = self.marginWidth(0)
+        start = self.SendScintilla(
+            QsciScintillaBase.SCI_POINTXFROMPOSITION, 0
+        )
+        vp = self.viewport()
+        self._cached_text_start_x = start - vp.pos().x() if vp else start
 
     def set_hover_database(self, db):
         self._hover_db = db
 
-    def _word_at_global(self, gx, gy):
+    def _calc_text_x(self, vx):
+        return vx - self._cached_text_start_x
+
+    def _word_at_viewport(self, vx, vy):
         fm = self.fontMetrics()
-        lx = self.mapFromGlobal(QPoint(gx, gy)).x()
-        ly = self.mapFromGlobal(QPoint(gx, gy)).y()
         fh = fm.height()
-        cw = fm.horizontalAdvance("n")
-        margin_w = self._cached_margin_w
-        line = ly // fh
-        if line < 0 or line >= len(self._cached_lines):
+        line_idx = vy // fh
+        if line_idx < 0 or line_idx >= len(self._cached_lines):
             return None
-        col = max(0, (lx - margin_w) // cw)
-        text_line = self._cached_lines[line]
-        if col >= len(text_line):
-            col = len(text_line) - 1
-        ident = _get_identifier(text_line, col)
-        if ident:
-            return ident
-        if col > 0:
-            ident = _get_identifier(text_line, col - 1)
-            if ident:
-                return ident
-        if col + 1 < len(text_line):
-            ident = _get_identifier(text_line, col + 1)
-            if ident:
-                return ident
+        text_line = self._cached_lines[line_idx]
+        text_x = self._calc_text_x(vx)
+        if text_x < 0:
+            return None
+        max_px = fm.horizontalAdvance(text_line)
+        if text_x >= max_px:
+            return None
+        col = 0
+        for m in re.finditer(r'[a-zA-Z_`$][\w$]*', text_line):
+            prefix = text_line[:m.start()]
+            start_px = fm.horizontalAdvance(prefix) if prefix else 0
+            end_px = start_px + fm.horizontalAdvance(m.group())
+            if start_px <= text_x < end_px:
+                return m.group()
+            # Also catch the transition zone at the end of previous word
         return None
 
     def _get_or_create_popup(self):
@@ -310,8 +318,8 @@ class CodeEditor(QsciScintilla):
         super().mouseMoveEvent(event)
         if not self._hover_db:
             return
-        gpos = self.viewport().mapToGlobal(event.position().toPoint())
-        word = self._word_at_global(gpos.x(), gpos.y())
+        pos = event.position().toPoint()
+        word = self._word_at_viewport(pos.x(), pos.y())
         if not word:
             self._last_tip_word = None
             self._hide_popup()
@@ -321,6 +329,7 @@ class CodeEditor(QsciScintilla):
         self._last_tip_word = word
         tip = self._hover_db.lookup(word, language=self._hover_language)
         if tip:
+            gpos = self.viewport().mapToGlobal(pos)
             self._show_popup(gpos, tip)
         else:
             self._hide_popup()
