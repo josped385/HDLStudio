@@ -19,6 +19,7 @@ from ui.actions import IDEActions
 from themes.theme_manager import ThemeManager
 from core.build_system import BuildSystem
 from core.wave_viewer import WaveViewer
+from core.hover_data import HoverDatabase
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
         self.project = Project()
         self.build_system = BuildSystem(self.project)
         self.wave_viewer = WaveViewer()
+        self.hover_db = HoverDatabase()
 
         self._setup_ui()
         self._warn_if_no_iverilog()
@@ -95,7 +97,7 @@ class MainWindow(QMainWindow):
 
     def _setup_editor(self):
 
-        self.editor_tabs = EditorTabs()
+        self.editor_tabs = EditorTabs(hover_db=self.hover_db)
         self.setCentralWidget(self.editor_tabs)
         self.editor_tabs.currentChanged.connect(self._on_tab_changed)
 
@@ -309,6 +311,8 @@ class MainWindow(QMainWindow):
             return
 
         tab.save()
+        if tab.path and self.hover_db:
+            self.hover_db.add_file(tab.path)
         self.signal_dock.update_from_file(tab.path)
 
     def new_file(self):
@@ -354,8 +358,19 @@ class MainWindow(QMainWindow):
             self.file_explorer_dock.explorer.model.index(path)
         )
 
+        self._index_project_files()
         self._refresh_build_context()
         self.status.showMessage(f"Project loaded: {self.project.name}")
+
+    def _index_project_files(self):
+        self.hover_db.clear()
+        if not self.project or not self.project.is_loaded():
+            return
+        import glob
+        root = self.project.root_path
+        for ext in ("*.v", "*.sv", "*.vhd", "*.vhdl"):
+            for f in glob.glob(os.path.join(root, "**", ext), recursive=True):
+                self.hover_db.add_file(f)
 
     def _warn_if_no_iverilog(self):
 

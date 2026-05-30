@@ -57,8 +57,10 @@ class PlusTabBar(QTabBar):
 
 class EditorTabs(QTabWidget):
 
-    def __init__(self):
+    def __init__(self, hover_db=None):
         super().__init__()
+
+        self._hover_db = hover_db
 
         # editor_tab -> EditorTab
         self.tabs = {}
@@ -126,12 +128,16 @@ class EditorTabs(QTabWidget):
         # create tab
         tab = EditorTab(path)
         tab.load_file()
+        tab.editor.set_hover_database(self._hover_db)
 
         tab.modified_changed.connect(
             lambda modified, t=tab: self._on_tab_modified(t, modified)
         )
 
         self.tabs[path] = tab
+
+        if self._hover_db:
+            self._hover_db.add_file(path)
 
         # ---------------- DISPLAY NAME ----------------
         if self.project and self.project.is_inside(path):
@@ -157,6 +163,7 @@ class EditorTabs(QTabWidget):
         self.untitled_counter += 1
 
         tab = EditorTab(None)
+        tab.editor.set_hover_database(self._hover_db)
 
         tab.modified_changed.connect(
             lambda modified, t=tab: self._on_tab_modified(t, modified)
@@ -217,6 +224,8 @@ class EditorTabs(QTabWidget):
                 break
 
         if key_to_remove:
+            if self._hover_db and isinstance(key_to_remove, str):
+                self._hover_db.remove_file(key_to_remove)
             del self.tabs[key_to_remove]
 
         self.removeTab(index)
@@ -293,6 +302,8 @@ class EditorTabs(QTabWidget):
         if tab.save_as(path):
             self._rename_tab(tab)
             self._rekey_tab(tab, path)
+            if self._hover_db:
+                self._hover_db.add_file(path)
 
     def _rename_tab(self, tab):
 

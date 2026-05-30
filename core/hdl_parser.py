@@ -123,6 +123,233 @@ class HDLParser:
         }
 
     @staticmethod
+    def parse_hover_data(content, language="verilog"):
+        if language in ("verilog", "systemverilog"):
+            return HDLParser._hover_verilog(content)
+        elif language == "vhdl":
+            return HDLParser._hover_vhdl(content)
+        return {}
+
+    @staticmethod
+    def _hover_verilog(content):
+        info = {}
+
+        clean = content
+        clean = re.sub(r"//.*", "", clean)
+        clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
+        clean = re.sub(r'"[^"]*"', "", clean)
+
+        # Collect all port names from module declarations for exclusion
+        port_names = set()
+        for m in re.finditer(
+            r"module\s+\w+\s*(?:#\s*\((.*?)\))?\s*\(([^)]*)\)\s*;",
+            clean, re.DOTALL | re.IGNORECASE,
+        ):
+            ports_raw = m.group(2) or ""
+            for p in re.finditer(
+                r"(?:input|output|inout)\s+(?:\w+\s+)*(?:\[([^\]]+)\]\s+)?(\w+)",
+                ports_raw, re.IGNORECASE,
+            ):
+                port_names.add(p.group(2))
+
+        # --- module definitions ---
+        for m in re.finditer(
+            r"module\s+(\w+)\s*(?:#\s*\((.*?)\))?\s*\(([^)]*)\)\s*;",
+            clean, re.DOTALL | re.IGNORECASE,
+        ):
+            name = m.group(1)
+            params_raw = (m.group(2) or "").strip()
+            ports_raw = m.group(3) or ""
+
+            params = []
+            for p in re.finditer(
+                r"\b(?:parameter|localparam)\s+(?:integer\s+)?(?:signed\s+)?"
+                r"(?:\[([^\]]+)\]\s+)?(\w+)\s*=\s*([^,;)\n]+)",
+                params_raw, re.IGNORECASE,
+            ):
+                width = p.group(1) or ""
+                pname = p.group(2)
+                val = p.group(3).strip()
+                param_str = f"    parameter [{width}] {pname} = {val}" if width else f"    parameter {pname} = {val}"
+                params.append(param_str)
+
+            ports = []
+            for p in re.finditer(
+                r"(input|output|inout)\s+"
+                r"(?:wire|reg|logic|integer)?\s*"
+                r"(?:signed\s+)?"
+                r"(?:\[([^\]]+)\]\s+)?"
+                r"(?:wire|reg|logic|integer)?\s*"
+                r"(?:signed\s+)?"
+                r"(?:\[([^\]]+)\]\s+)?"
+                r"(\w+)",
+                ports_raw, re.IGNORECASE,
+            ):
+                direction = p.group(1).lower()
+                width = p.group(2) or p.group(3) or ""
+                pname = p.group(4)
+                w = f" [{width}]" if width else ""
+                ports.append(f"  {direction} {w} {pname}")
+
+            lines = [f"module {name}"]
+            if params:
+                lines.append("  # (")
+                lines.extend(params)
+                lines.append("  )")
+            if ports:
+                lines.append("  (")
+                lines.extend(ports)
+                lines.append("  );")
+            lines.append(f"endmodule  // {name}")
+            module_text = "\n".join(lines)
+            info[name] = {"kind": "module", "detail": module_text}
+
+            for p in re.finditer(
+                r"(input|output|inout)\s+"
+                r"(?:wire|reg|logic|integer)?\s*"
+                r"(?:signed\s+)?"
+                r"(?:\[([^\]]+)\]\s+)?"
+                r"(?:wire|reg|logic|integer)?\s*"
+                r"(?:signed\s+)?"
+                r"(?:\[([^\]]+)\]\s+)?"
+                r"(\w+)",
+                ports_raw, re.IGNORECASE,
+            ):
+                pname = p.group(4)
+                if pname not in info or info[pname]["kind"] == "module":
+                    info[pname] = {"kind": "port",
+                                    "detail": f"port {pname} of module {name}"}
+
+        # --- parameters / localparams (body-level, not inside module #()) ---
+        for m in re.finditer(
+            r"\b(?:localparam|parameter)\s+(?:integer\s+)?(?:signed\s+)?"
+            r"(?:\[([^\]]+)\]\s+)?(\w+)\s*=\s*([^,;)\n]+)",
+            clean, re.IGNORECASE,
+        ):
+            width = m.group(1) or ""
+            pname = m.group(2)
+            val = m.group(3).strip()
+            w = f" [{width}]" if width else ""
+            info[pname] = {"kind": "parameter", "detail": f"parameter{w} {pname} = {val}"}
+
+        # --- wire / reg / logic declarations (skip port names) ---
+        declared = set()
+        for m in re.finditer(
+            r"\b(wire|reg|logic|integer)\s+"
+            r"(?:signed\s+)?"
+            r"(?:\[([^\]]+)\]\s+)?"
+            r"(\w+)",
+            clean, re.IGNORECASE,
+        ):
+            stype = m.group(1).lower()
+            width = m.group(2) or ""
+            wname = m.group(3)
+            if wname in port_names:
+                continue
+            if wname in declared:
+                continue
+            declared.add(wname)
+            if stype == "integer":
+                decl = f"integer {wname}"
+            else:
+                w = f" [{width}]" if width else ""
+                decl = f"{stype}{w} {wname}"
+            if wname not in info:
+                info[wname] = {"kind": stype, "detail": decl}
+
+        # --- module instantiations ---
+        _INST_SKIP = {
+            "module", "endmodule", "if", "for", "while", "case",
+            "begin", "end", "initial", "always", "assign",
+            "input", "output", "inout", "wire", "reg", "logic",
+            "integer", "real", "time", "tri", "tri0", "tri1",
+            "wand", "wor", "triand", "trior", "trireg", "uwire",
+            "localparam", "parameter", "function", "task",
+            "generate", "endgenerate", "specify", "endspecify",
+            "and", "or", "nand", "nor", "xor", "xnor", "not",
+            "buf", "bufif0", "bufif1", "notif0", "notif1",
+            "pullup", "pulldown", "cmos", "rcmos", "nmos",
+            "pmos", "rnmos", "rpmos", "tran", "rtran",
+            "tranif0", "tranif1", "rtranif0", "rtranif1",
+        }
+        for m in re.finditer(
+            r"(\w+)\s+(?:#\s*\(((?:[^()]|\([^()]*\))*)\)\s+)?(\w+)\s*\(([^;]*?)\)\s*;",
+            clean, re.DOTALL,
+        ):
+            mod = m.group(1)
+            params_ov = (m.group(2) or "").strip()
+            inst = m.group(3)
+            if mod.lower() in _INST_SKIP:
+                continue
+            conns_raw = m.group(4)
+            header = f"{mod}"
+            if params_ov:
+                header += f" #({params_ov})"
+            header += f" {inst} ("
+            lines = [header]
+            for c in re.finditer(r"\.(\w+)\s*\(\s*([^;)]*?)\s*\)", conns_raw):
+                port = c.group(1)
+                sig = c.group(2).strip()
+                lines.append(f"  .{port}( {sig} ),")
+            if len(lines) > 1 and lines[-1].endswith(","):
+                lines[-1] = lines[-1][:-1]
+            lines.append(");")
+            info[inst] = {"kind": "instance", "detail": "\n".join(lines)}
+
+        return info
+
+    @staticmethod
+    def _hover_vhdl(content):
+        info = {}
+        clean = re.sub(r"--.*", "", content)
+        clean = re.sub(r'"[^"]*"', "", clean)
+
+        # --- entity definitions ---
+        em = re.search(r"entity\s+(\w+)\s+is\s+port\s*\((.+?)\)\s*;", clean, re.DOTALL | re.IGNORECASE)
+        if em:
+            name = em.group(1)
+            port_text = em.group(2)
+            ports = []
+            for p in re.finditer(
+                r"(\w+)\s*:\s*(in|out|inout)\s+(\w+(?:_vector)?)\s*(?:\(([^)]*)\))?\s*;?",
+                port_text, re.IGNORECASE,
+            ):
+                pname = p.group(1)
+                direction = p.group(2)
+                ptype = p.group(3)
+                width = p.group(4) or ""
+                w = f" ({width})" if width else ""
+                ports.append(f"  {pname} : {direction} {ptype}{w}")
+            if ports:
+                lines = [f"entity {name} is", "  port (", *ports, "  );", f"end {name};"]
+                info[name] = {"kind": "entity", "detail": "\n".join(lines)}
+
+        # --- signal declarations ---
+        for m in re.finditer(
+            r"signal\s+(\w+)\s*:\s*(\w+(?:_vector)?)\s*(?:\(([^)]*)\))?\s*;",
+            clean, re.IGNORECASE,
+        ):
+            sname = m.group(1)
+            stype = m.group(2)
+            width = m.group(3) or ""
+            w = f" ({width})" if width else ""
+            info[sname] = {"kind": "signal", "detail": f"signal {sname} : {stype}{w}"}
+
+        # --- constant declarations ---
+        for m in re.finditer(
+            r"constant\s+(\w+)\s*:\s*(\w+(?:_vector)?)\s*(?:\(([^)]*)\))?\s*:=\s*([^;]+)",
+            clean, re.IGNORECASE,
+        ):
+            cname = m.group(1)
+            ctype = m.group(2)
+            width = m.group(3) or ""
+            val = m.group(4).strip()
+            w = f" ({width})" if width else ""
+            info[cname] = {"kind": "constant", "detail": f"constant {cname} : {ctype}{w} := {val}"}
+
+        return info
+
+    @staticmethod
     def _parse_vhdl(content):
         inputs = []
         outputs = []
