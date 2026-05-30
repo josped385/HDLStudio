@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
 from ui.docks.file_explorer_dock import FileExplorerDock
 from ui.docks.signal_dock import SignalDock
 from ui.docks.terminal_dock import TerminalDock
+from ui.docks.template_dock import TemplateDock
 from ui.editor_tabs import EditorTabs
 from ui.panels.status_bar import IDEStatusBar
 from ui.toolbar import MainToolBar
@@ -58,6 +59,7 @@ class MainWindow(QMainWindow):
         self._setup_activity_bar()
         self._setup_file_explorer()
         self._setup_connections()
+        self._setup_templates()
         self._setup_terminal()
         self._setup_status_bar()
 
@@ -117,12 +119,17 @@ class MainWindow(QMainWindow):
 
     def _show_activity_panel(self, panel):
 
+        self.signal_dock.hide()
+        self.template_dock.hide()
+        self.file_explorer_dock.hide()
+
         if panel == "explorer":
-            self.signal_dock.hide()
             self.file_explorer_dock.show()
             self.file_explorer_dock.raise_()
+        elif panel == "templates":
+            self.template_dock.show()
+            self.template_dock.raise_()
         else:
-            self.file_explorer_dock.hide()
             self.signal_dock.show()
             self.signal_dock.raise_()
 
@@ -155,6 +162,23 @@ class MainWindow(QMainWindow):
         )
 
         self.signal_dock.hide()
+
+    # ---------------- TEMPLATES ----------------
+
+    def _setup_templates(self):
+
+        self.template_dock = TemplateDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.template_dock
+        )
+
+        self.template_dock.new_file_requested.connect(self._on_template_new_file)
+        self.template_dock.hide()
+
+    def _on_template_new_file(self, filename, code):
+        self.editor_tabs.new_file(content=code, suggested_name=filename)
 
     # ---------------- TERMINAL ----------------
 
@@ -544,6 +568,7 @@ class MainWindow(QMainWindow):
         icon_map = {
             "file_explorer": self.activity_bar.explorer_btn,
             "connections": self.activity_bar.connections_btn,
+            "templates": self.activity_bar.templates_btn,
         }
         for name, action in icon_map.items():
             action.setIcon(QIcon(TM.icon(name)))
@@ -578,6 +603,7 @@ class MainWindow(QMainWindow):
         self.toolbar.apply_theme(colors)
         self.terminal_dock.apply_theme(colors)
         self.signal_dock.apply_theme(colors)
+        self.template_dock.apply_theme(colors)
 
         self.editor_tabs._style_plus_tab_bar()
         for tab in self.editor_tabs.tabs.values():

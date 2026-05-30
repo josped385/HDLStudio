@@ -158,7 +158,7 @@ class EditorTabs(QTabWidget):
 
     # ---------------- NEW FILE ----------------
 
-    def new_file(self):
+    def new_file(self, content=None, suggested_name=None):
 
         self.untitled_counter += 1
 
@@ -171,13 +171,22 @@ class EditorTabs(QTabWidget):
 
         self.tabs[id(tab.editor)] = tab
 
+        name = suggested_name or f"untitled-{self.untitled_counter}"
         self.addTab(
             tab.editor,
             QIcon(ThemeManager.icon("file")),
-            f"untitled-{self.untitled_counter}"
+            name
         )
 
         self.setCurrentWidget(tab.editor)
+
+        if content:
+            tab.editor.setText(content)
+            if suggested_name:
+                ext = os.path.splitext(suggested_name)[1].lower()
+                if ext in (".v", ".sv", ".vhd"):
+                    tab.editor.set_lexer_for_file(suggested_name)
+                    tab.editor.apply_theme_from_colors()
 
         tab.editor.apply_theme_from_colors()
 

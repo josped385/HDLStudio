@@ -61,12 +61,27 @@ class ActivityBar(QToolBar):
         self.connections_btn.setCheckable(True)
         self.connections_btn.triggered.connect(self._on_connections)
 
+        self.templates_btn = self.addAction(
+            QIcon("assets/icons/templates.svg"),
+            "Templates"
+        )
+        self.templates_btn.setCheckable(True)
+        self.templates_btn.triggered.connect(self._on_templates)
+
     def _on_explorer(self):
         self.explorer_btn.setChecked(True)
         self.connections_btn.setChecked(False)
+        self.templates_btn.setChecked(False)
         self.main._show_activity_panel("explorer")
 
     def _on_connections(self):
-        self.connections_btn.setChecked(True)
         self.explorer_btn.setChecked(False)
+        self.connections_btn.setChecked(True)
+        self.templates_btn.setChecked(False)
         self.main._show_activity_panel("connections")
+
+    def _on_templates(self):
+        self.explorer_btn.setChecked(False)
+        self.connections_btn.setChecked(False)
+        self.templates_btn.setChecked(True)
+        self.main._show_activity_panel("templates")
