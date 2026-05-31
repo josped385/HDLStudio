@@ -106,6 +106,8 @@ class MainWindow(QMainWindow):
         self.editor_tabs = EditorTabs(hover_db=self.hover_db)
         self.setCentralWidget(self.editor_tabs)
         self.editor_tabs.currentChanged.connect(self._on_tab_changed)
+        self.editor_tabs.navigate_to_definition.connect(self._on_go_to_definition)
+        self.editor_tabs.navigate_to_module_name.connect(self._on_navigate_to_module)
 
     # ---------------- TOOLBAR ----------------
 
@@ -247,6 +249,68 @@ class MainWindow(QMainWindow):
         else:
             self.signal_dock.update_from_file(None)
             self.hierarchy_dock.update_from_file(None)
+
+    def _on_go_to_definition(self, filepath, lineno):
+
+        self.open_project_file(filepath)
+        tab = self.editor_tabs.current_tab()
+        if tab:
+            tab.editor.setCursorPosition(lineno - 1, 0)
+            tab.editor.ensureLineVisible(lineno - 1)
+            tab.editor.setFocus()
+
+    def _navigate_and_highlight(self, filepath, lineno):
+        self.open_project_file(filepath)
+        tab = self.editor_tabs.current_tab()
+        if tab:
+            tab.editor.setCursorPosition(lineno - 1, 0)
+            tab.editor.ensureLineVisible(lineno - 1)
+            tab.editor.setFocus()
+
+    def _on_navigate_to_module(self, name):
+
+        import re
+
+        # 1. Search all open tabs
+        for tab in list(self.editor_tabs.tabs.values()):
+            if not tab.path:
+                continue
+            content = tab.editor.text()
+            for pat in (rf'module\s+{re.escape(name)}\b',
+                        rf'entity\s+{re.escape(name)}\b'):
+                m = re.search(pat, content, re.IGNORECASE)
+                if m:
+                    lineno = content[:m.start()].count("\n") + 1
+                    self._navigate_and_highlight(tab.path, lineno)
+                    return
+
+        # 2. Determine search root
+        root = None
+        if self.project and self.project.is_loaded():
+            root = self.project.root_path
+        else:
+            cur = self.editor_tabs.current_tab()
+            if cur and cur.path:
+                root = os.path.dirname(cur.path)
+        if not root or not os.path.isdir(root):
+            return
+
+        # 3. Recursive filesystem search
+        import glob as gb
+        for ext in ("*.v", "*.sv", "*.vhd", "*.vhdl"):
+            for f in gb.glob(os.path.join(root, "**", ext), recursive=True):
+                try:
+                    with open(f, "r", encoding="utf-8", errors="replace") as fh:
+                        cont = fh.read()
+                    for pat in (rf'module\s+{re.escape(name)}\b',
+                                rf'entity\s+{re.escape(name)}\b'):
+                        m = re.search(pat, cont, re.IGNORECASE)
+                        if m:
+                            lineno = cont[:m.start()].count("\n") + 1
+                            self._navigate_and_highlight(f, lineno)
+                            return
+                except Exception:
+                    pass
 
     # ---------------- FILE CONTEXT ----------------
 

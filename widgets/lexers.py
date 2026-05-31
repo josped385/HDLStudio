@@ -52,6 +52,7 @@ _COLORS_LIGHT = {
 class BaseHDLLexer(QsciLexerCustom):
 
     STYLE_MAP = {}
+    _REGEX = None
     _CTRL   = set()
     _EVENT  = set()
 
@@ -97,6 +98,9 @@ class BaseHDLLexer(QsciLexerCustom):
         names = {v: k for k, v in self.STYLE_MAP.items()}
         return names.get(style, f"Style {style}")
 
+    def _token_style(self, kind, word):
+        return Style.Default
+
     def styleText(self, start, end):
         editor = self.editor()
         if not editor:
@@ -111,17 +115,34 @@ class BaseHDLLexer(QsciLexerCustom):
         line_start = text.rfind("\n", 0, start)
         line_start = 0 if line_start == -1 else line_start + 1
 
-        segment = text[line_start:end]
+        line_end = text.find("\n", end)
+        if line_end == -1:
+            line_end = n
 
-        self.startStyling(line_start, 0x1f)
-        styled = 0
-        for token, style_id in self._tokenize(segment):
-            self.setStyling(len(token), style_id)
-            styled += len(token)
+        full_line = text[line_start:line_end]
 
-        remaining = len(segment) - styled
-        if remaining > 0:
-            self.setStyling(remaining, Style.Default)
+        # Build character-level style array for full line context
+        char_styles = [Style.Default] * (line_end - line_start)
+        if self._REGEX:
+            for m in self._REGEX.finditer(full_line):
+                kind = m.lastgroup
+                token = m.group()
+                sid = self._token_style(kind, token)
+                for i in range(m.start(), min(m.end(), line_end - line_start)):
+                    char_styles[i] = sid
+
+        # Apply contiguous styles for exact range [start, end)
+        self.startStyling(start, 0x1f)
+        rel_start = start - line_start
+        rel_end = min(end, line_end) - line_start
+        i = rel_start
+        while i < rel_end:
+            sid = char_styles[i]
+            j = i + 1
+            while j < rel_end and char_styles[j] == sid:
+                j += 1
+            self.setStyling(j - i, sid)
+            i = j
 
     def _tokenize(self, text):
         raise NotImplementedError
@@ -223,6 +244,7 @@ _VERILOG_RE = re.compile(
 
 class VerilogLexer(BaseHDLLexer):
 
+    _REGEX = _VERILOG_RE
     _CTRL  = _VLOG_CTRL
     _EVENT = _VLOG_EVENT
 
@@ -249,39 +271,34 @@ class VerilogLexer(BaseHDLLexer):
         ws.update(f"`{d}" for d in _VLOG_DIRECTIVES)
         return sorted(ws)
 
-    def _tokenize(self, text):
-        for m in _VERILOG_RE.finditer(text):
-            kind = m.lastgroup
-            if kind == "whitespace":
-                yield m.group(), Style.Default
-            elif kind == "comment_single":
-                yield m.group(), Style.Comment
-            elif kind == "comment_block":
-                yield m.group(), Style.CommentBlock
-            elif kind == "string":
-                yield m.group(), Style.String
-            elif kind == "directive":
-                yield m.group(), Style.Directive
-            elif kind == "number":
-                yield m.group(), Style.Number
-            elif kind == "identifier":
-                word = m.group()
-                if word in _VLOG_CTRL:
-                    yield word, Style.Control
-                elif word in _VLOG_EVENT:
-                    yield word, Style.Event
-                elif word in _VLOG_KW:
-                    yield word, Style.Keyword
-                elif word in _VLOG_TYPES:
-                    yield word, Style.Type
-                elif word in _VLOG_OPS:
-                    yield word, Style.Operator
-                else:
-                    yield word, Style.Identifier
-            elif kind == "operator":
-                yield m.group(), Style.Operator
-            else:
-                yield m.group(), Style.Default
+    def _token_style(self, kind, word):
+        if kind == "whitespace":
+            return Style.Default
+        if kind == "comment_single":
+            return Style.Comment
+        if kind == "comment_block":
+            return Style.CommentBlock
+        if kind == "string":
+            return Style.String
+        if kind == "directive":
+            return Style.Directive
+        if kind == "number":
+            return Style.Number
+        if kind == "identifier":
+            if word in _VLOG_CTRL:
+                return Style.Control
+            if word in _VLOG_EVENT:
+                return Style.Event
+            if word in _VLOG_KW:
+                return Style.Keyword
+            if word in _VLOG_TYPES:
+                return Style.Type
+            if word in _VLOG_OPS:
+                return Style.Operator
+            return Style.Identifier
+        if kind == "operator":
+            return Style.Operator
+        return Style.Default
 
 
 # ── VHDL ───────────────────────────────────────────────────
@@ -353,6 +370,7 @@ _VHDL_RE = re.compile(
 
 class VHDLLexer(BaseHDLLexer):
 
+    _REGEX = _VHDL_RE
     _CTRL  = _VHDL_CTRL
     _EVENT = set()
 
@@ -361,7 +379,6 @@ class VHDLLexer(BaseHDLLexer):
         Style.Keyword:      "keyword",
         Style.Type:         "type",
         Style.Number:       "number",
-        Style.Comment:      "comment",
         Style.String:       "string",
         Style.Identifier:   "identifier",
         Style.Operator:     "operator",
@@ -374,33 +391,28 @@ class VHDLLexer(BaseHDLLexer):
     def _completion_words(self):
         return sorted(set(_VHDL_KW) | set(_VHDL_CTRL) | set(_VHDL_TYPES) | _VHDL_OPS)
 
-    def _tokenize(self, text):
-        for m in _VHDL_RE.finditer(text):
-            kind = m.lastgroup
-            if kind == "whitespace":
-                yield m.group(), Style.Default
-            elif kind == "comment":
-                yield m.group(), Style.Comment
-            elif kind == "string":
-                yield m.group(), Style.String
-            elif kind == "char_literal":
-                yield m.group(), Style.String
-            elif kind == "number":
-                yield m.group(), Style.Number
-            elif kind == "identifier":
-                word = m.group()
-                low = word.lower()
-                if low in _VHDL_CTRL:
-                    yield word, Style.Control
-                elif low in _VHDL_KW:
-                    yield word, Style.Keyword
-                elif low in _VHDL_TYPES:
-                    yield word, Style.Type
-                elif low in _VHDL_OPS:
-                    yield word, Style.Operator
-                else:
-                    yield word, Style.Identifier
-            elif kind == "operator":
-                yield m.group(), Style.Operator
-            else:
-                yield m.group(), Style.Default
+    def _token_style(self, kind, word):
+        if kind == "whitespace":
+            return Style.Default
+        if kind == "comment":
+            return Style.Comment
+        if kind == "string":
+            return Style.String
+        if kind == "char_literal":
+            return Style.String
+        if kind == "number":
+            return Style.Number
+        if kind == "identifier":
+            low = word.lower()
+            if low in _VHDL_CTRL:
+                return Style.Control
+            if low in _VHDL_KW:
+                return Style.Keyword
+            if low in _VHDL_TYPES:
+                return Style.Type
+            if low in _VHDL_OPS:
+                return Style.Operator
+            return Style.Identifier
+        if kind == "operator":
+            return Style.Operator
+        return Style.Default

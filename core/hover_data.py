@@ -39,6 +39,13 @@ class HoverDatabase:
     def clear(self):
         self._entries.clear()
 
+    def find_definition(self, name):
+        for entry in self._entries.values():
+            item = entry["items"].get(name)
+            if item and item.get("kind") in ("module", "entity"):
+                return entry["file"], item.get("line", 1)
+        return None
+
     def lookup(self, name, language=None):
         results = []
 

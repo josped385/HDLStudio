@@ -160,6 +160,7 @@ class HDLParser:
             name = m.group(1)
             params_raw = (m.group(2) or "").strip()
             ports_raw = m.group(3) or ""
+            line_no = content[:m.start()].count("\n") + 1
 
             params = []
             for p in re.finditer(
@@ -202,7 +203,7 @@ class HDLParser:
                 lines.append("  );")
             lines.append(f"endmodule  // {name}")
             module_text = "\n".join(lines)
-            info[name] = {"kind": "module", "detail": module_text}
+            info[name] = {"kind": "module", "detail": module_text, "line": line_no}
 
             for p in re.finditer(
                 r"(input|output|inout)\s+"
@@ -309,6 +310,7 @@ class HDLParser:
         if em:
             name = em.group(1)
             port_text = em.group(2)
+            line_no = content[:em.start()].count("\n") + 1
             ports = []
             for p in re.finditer(
                 r"(\w+)\s*:\s*(in|out|inout)\s+(\w+(?:_vector)?)\s*(?:\(([^)]*)\))?\s*;?",
@@ -322,7 +324,7 @@ class HDLParser:
                 ports.append(f"  {pname} : {direction} {ptype}{w}")
             if ports:
                 lines = [f"entity {name} is", "  port (", *ports, "  );", f"end {name};"]
-                info[name] = {"kind": "entity", "detail": "\n".join(lines)}
+                info[name] = {"kind": "entity", "detail": "\n".join(lines), "line": line_no}
 
         # --- signal declarations ---
         for m in re.finditer(

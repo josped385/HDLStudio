@@ -288,6 +288,8 @@ class _TooltipPopup(QFrame):
 class CodeEditor(QsciScintilla):
 
     cursor_position_changed = pyqtSignal(int, int)
+    navigate_to_definition = pyqtSignal(str, int)  # filepath, lineno
+    navigate_to_module_name = pyqtSignal(str)  # module name (fallback)
 
     def __init__(self):
         super().__init__()
@@ -449,6 +451,22 @@ class CodeEditor(QsciScintilla):
         else:
             self._hide_popup()
 
+    def mousePressEvent(self, event):
+        if (event.button() == Qt.MouseButton.LeftButton
+                and (event.modifiers() & Qt.KeyboardModifier.ControlModifier)):
+            pos = event.position().toPoint()
+            word = self._word_at_viewport(pos.x(), pos.y())
+            if word:
+                if self._hover_db:
+                    result = self._hover_db.find_definition(word)
+                    if result:
+                        filepath, lineno = result
+                        self.navigate_to_definition.emit(filepath, lineno)
+                        return
+                self.navigate_to_module_name.emit(word)
+                return
+        super().mousePressEvent(event)
+
     def leaveEvent(self, event):
         super().leaveEvent(event)
         self._last_tip_word = None
@@ -479,7 +497,8 @@ class CodeEditor(QsciScintilla):
 
         for style_id in range(33):
             self.SendScintilla(QsciScintillaBase.SCI_STYLESETBACK, style_id, bg)
-            self.SendScintilla(QsciScintillaBase.SCI_STYLESETFORE, style_id, fg)
+            if not self._lexer or style_id not in self._lexer.STYLE_MAP:
+                self.SendScintilla(QsciScintillaBase.SCI_STYLESETFORE, style_id, fg)
 
         self.SendScintilla(QsciScintillaBase.SCI_SETSELFORE, 1, sel)
         self.SendScintilla(QsciScintillaBase.SCI_SETSELBACK, 1, sel)
@@ -491,6 +510,7 @@ class CodeEditor(QsciScintilla):
         self.SendScintilla(QsciScintillaBase.SCI_STYLESETFORE, 33, margin_fg)
         self.SendScintilla(QsciScintillaBase.SCI_SETEDGECOLOUR, edge)
 
+        # Re-apply theme after setLexer so setColor calls reach the editor
         if self._lexer:
             self._lexer.apply_theme(colors)
 
