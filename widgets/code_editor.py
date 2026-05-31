@@ -1,11 +1,67 @@
 import os
 import re
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtGui import QColor, QFont, QKeyEvent
 from PyQt6.Qsci import QsciScintilla, QsciScintillaBase
 from PyQt6.QtCore import pyqtSignal, Qt, QPoint, QTimer
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
 from widgets.lexers import VerilogLexer, VHDLLexer
+
+
+_SNIPPETS_VERILOG = {
+    "if": "if () begin\n    $\nend",
+    "ifelse": "if () begin\n    $\nend else begin\n    \nend",
+    "always": "always @() begin\n    $\nend",
+    "always_ff": "always_ff @(posedge clk) begin\n    $\nend",
+    "always_comb": "always_comb begin\n    $\nend",
+    "always_latch": "always_latch begin\n    $\nend",
+    "module": "module  (\n    $\n);\n    \nendmodule",
+    "case": "case ()\n    : begin\n        $\n    end\n    default: begin\n        \n    end\nendcase",
+    "casex": "casex ()\n    : begin\n        $\n    end\n    default: begin\n        \n    end\nendcase",
+    "casez": "casez ()\n    : begin\n        $\n    end\n    default: begin\n        \n    end\nendcase",
+    "for": "for ( = 0;  < ; ++) begin\n    $\nend",
+    "while": "while () begin\n    $\nend",
+    "forever": "forever begin\n    $\nend",
+    "repeat": "repeat () begin\n    $\nend",
+    "begin": "begin\n    $\nend",
+    "assign": "assign  = $;",
+    "initial": "initial begin\n    $\nend",
+    "function": "function ;\n    $\nendfunction",
+    "endfunction": "endfunction",
+    "task": "task ;\n    $\nendtask",
+    "endtask": "endtask",
+    "testbench": "module tb_();\n    \n    // DUT wires/regs\n    \n     #(\n        .()\n    ) dut (\n        .()\n    );\n    \n    initial begin\n        $\n    end\nendmodule",
+    "assert": "assert () else $warning(\"\");",
+    "typedef": "typedef enum {\n    $\n} ;",
+    "generate": "generate\n    $\nendgenerate",
+    "property": "property ;\n    $\nendproperty",
+    "sequence": "sequence ;\n    $\nendsequence",
+    "interface": "interface  ();\n    $\nendinterface",
+    "clocking": "clocking  @(posedge clk);\n    $\nendclocking",
+    "class": "class ;\n    $\nendclass",
+    "package": "package ;\n    $\nendpackage",
+}
+
+_SNIPPETS_VHDL = {
+    "if": "if ($) then\n    \nend if;",
+    "ifelse": "if ($) then\n    \nelse\n    \nend if;",
+    "process": "process ($)\nbegin\n    $\nend process;",
+    "entity": "entity  is\n    port (\n        $\n    );\nend entity;",
+    "architecture": "architecture  of  is\n    $\nbegin\n    \nend architecture;",
+    "case": "case ($) is\n    when  =>\n        \n    when others =>\n        \nend case;",
+    "for": "for $ in  to  loop\n    \nend loop;",
+    "while": "while ($) loop\n    \nend loop;",
+    "signal": "signal  : $;",
+    "variable": "variable  : $;",
+    "constant": "constant  : $ := ;",
+    "function": "function  return  is\n    $\nbegin\n    \nend function;",
+    "procedure": "procedure  is\n    $\nbegin\n    \nend procedure;",
+    "component": "component  is\n    port (\n        $\n    );\nend component;",
+    "generate": "generate\n    $\nend generate;",
+    "record": "type  is record\n    $\nend record;",
+    "package": "package  is\n    $\nend package;",
+    "package_body": "package body  is\n    $\nend package body;",
+}
 
 _VERILOG_KW = frozenset({
     "module", "endmodule", "input", "output", "inout", "wire", "reg", "logic",
@@ -255,6 +311,65 @@ class CodeEditor(QsciScintilla):
             self._on_cursor_changed
         )
         self.textChanged.connect(self._cache_doc_lines)
+
+    def _get_snippets(self):
+        if not self._lexer:
+            return None
+        lang = type(self._lexer).__name__
+        if lang == "VHDLLexer":
+            return _SNIPPETS_VHDL
+        return _SNIPPETS_VERILOG
+
+    def _try_expand_snippet(self):
+        line, col = self.getCursorPosition()
+        line_text = self.text(line)
+        if not line_text or col <= 0:
+            return False
+
+        word_start = col
+        while word_start > 0 and (line_text[word_start - 1].isalnum() or line_text[word_start - 1] == "_"):
+            word_start -= 1
+
+        if word_start >= col:
+            return False
+
+        word = line_text[word_start:col]
+        snippets = self._get_snippets()
+        if not snippets or word not in snippets:
+            return False
+
+        template = snippets[word]
+
+        dollar_idx = template.find("$")
+        template_clean = template.replace("$", "", 1) if dollar_idx >= 0 else template
+
+        old_auto = self.autoIndent()
+        self.setAutoIndent(False)
+
+        self.setSelection(line, word_start, line, col)
+        self.replaceSelectedText(template_clean)
+
+        self.setAutoIndent(old_auto)
+
+        if dollar_idx >= 0:
+            before = template[:dollar_idx]
+            lines_before = before.count("\n")
+            if lines_before == 0:
+                cl = line
+                cc = word_start + dollar_idx
+            else:
+                cl = line + lines_before
+                last_nl = before.rfind("\n")
+                cc = dollar_idx - last_nl - 1
+            self.setCursorPosition(cl, cc)
+
+        return True
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Tab and not (event.modifiers() & ~Qt.KeyboardModifier.NoModifier):
+            if self._try_expand_snippet():
+                return
+        super().keyPressEvent(event)
 
     def setText(self, text):
         super().setText(text)
