@@ -1,5 +1,5 @@
 import os
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from PyQt6.QtGui import QIcon, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QTabWidget, QTabBar, QMessageBox, QPushButton,
@@ -9,54 +9,6 @@ from PyQt6.QtWidgets import (
 from ui.editor_tab import EditorTab
 from ui.find_replace import FindReplaceBar
 from themes.theme_manager import ThemeManager
-
-
-class PlusTabBar(QTabBar):
-    plusClicked = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._plus_btn = QPushButton("+", self)
-        f = QFont("Consolas", 14)
-        f.setBold(True)
-        self._plus_btn.setFont(f)
-        self._plus_btn.setFixedSize(28, 26)
-        self._plus_btn.setFlat(True)
-        self._plus_btn.setCursor(Qt.CursorShape.ArrowCursor)
-        self._plus_btn.clicked.connect(self.plusClicked.emit)
-        self._plus_btn.show()
-
-    def _reposition_plus(self):
-        if self.count() == 0:
-            x = 2
-        else:
-            last_rect = self.tabRect(self.count() - 1)
-            x = last_rect.right() + 2
-        y = (self.height() - self._plus_btn.height()) // 2
-        self._plus_btn.move(x, y)
-        self._plus_btn.raise_()
-
-    def resizeEvent(self, e):
-        super().resizeEvent(e)
-        self._reposition_plus()
-
-    def tabLayoutChange(self):
-        super().tabLayoutChange()
-        self._reposition_plus()
-
-    def style_plus_btn(self, colors):
-        self._plus_btn.setStyleSheet(f"""
-            QPushButton {{
-                color: {colors["text"]};
-                background: transparent;
-                border: none;
-                padding: 0px 4px;
-            }}
-            QPushButton:hover {{
-                color: {colors["accent"]};
-                background: {colors["panel_hover"]};
-            }}
-        """)
 
 
 class EditorTabs(QWidget):
@@ -80,11 +32,30 @@ class EditorTabs(QWidget):
         self._tab.tabCloseRequested.connect(self.close_tab)
         self._tab.currentChanged.connect(self._on_tab_changed)
         self._tab.currentChanged.connect(self.currentChanged.emit)
-        self._tab.setTabsClosable(True)
         self._tab.setMovable(True)
         self._tab.setDocumentMode(True)
 
-        self._setup_plus_tab_bar()
+        self._tab.setTabsClosable(True)
+
+        self._tab_bar = self._tab.tabBar()
+        self._tab_bar.setExpanding(False)
+        self._tab_bar.setDrawBase(False)
+        self._tab_bar.tabBarClicked.connect(self._on_tab_bar_clicked)
+
+        self._plus_btn = QPushButton("+", self._tab)
+        self._plus_btn.setFixedSize(28, 26)
+        self._plus_btn.setFlat(True)
+        self._plus_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        self._plus_btn.clicked.connect(self._on_new_tab)
+        self._plus_btn.show()
+
+        self._tab_bar.installEventFilter(self)
+        self._tab.currentChanged.connect(self._reposition_plus)
+
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self._reposition_plus)
+
+        self._style_tab_buttons()
 
         # Find/Replace bar
         self._find_bar = FindReplaceBar(self)
@@ -103,12 +74,6 @@ class EditorTabs(QWidget):
         self._replace_shortcut = QShortcut(QKeySequence("Ctrl+H"), self)
         self._replace_shortcut.activated.connect(self._show_replace)
 
-    def _setup_plus_tab_bar(self):
-        bar = PlusTabBar(self._tab)
-        bar.plusClicked.connect(self._on_new_tab)
-        self._tab.setTabBar(bar)
-        self._plus_bar = bar
-
     def _show_find(self):
         self._find_bar.show_bar()
 
@@ -116,9 +81,44 @@ class EditorTabs(QWidget):
         self._find_bar.show_bar()
         self._find_bar._replace_input.setFocus()
 
-    def _style_plus_tab_bar(self):
+    def eventFilter(self, obj, event):
+        if obj is self._tab_bar and event.type() == QEvent.Type.Resize:
+            self._reposition_plus()
+        return super().eventFilter(obj, event)
+
+    def _reposition_plus(self):
+        bar = self._tab_bar
+        if bar.count() == 0:
+            x = 2
+        else:
+            last_rect = bar.tabRect(bar.count() - 1)
+            x = last_rect.right() + 2
+        y = (bar.height() - self._plus_btn.height()) // 2
+        if y < 0:
+            y = 0
+        local = bar.mapTo(self._tab, bar.pos())
+        self._plus_btn.move(local.x() + x, local.y() + y)
+        self._plus_btn.raise_()
+
+    def _on_tab_bar_clicked(self, index):
+        self._reposition_plus()
+
+    def _style_tab_buttons(self):
         c = ThemeManager.colors()
-        self._plus_bar.style_plus_btn(c)
+        self._plus_btn.setStyleSheet(f"""
+            QPushButton {{
+                color: {c["text"]};
+                background: transparent;
+                border: none;
+                padding: 0px 4px;
+                font-size: 18px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                color: {c["accent"]};
+                background: {c["panel_hover"]};
+            }}
+        """)
 
     def _on_new_tab(self):
         from ui.main_window import MainWindow
@@ -182,6 +182,7 @@ class EditorTabs(QWidget):
             display_name
         )
         self._tab.setCurrentWidget(tab.editor)
+        self._reposition_plus()
 
         tab.editor.apply_theme_from_colors()
 
@@ -218,6 +219,7 @@ class EditorTabs(QWidget):
                     tab.editor.apply_theme_from_colors()
 
         tab.editor.apply_theme_from_colors()
+        self._reposition_plus()
 
     # ---------------- CLOSE TAB (SAFE) ----------------
 
@@ -267,6 +269,7 @@ class EditorTabs(QWidget):
             del self.tabs[key_to_remove]
 
         self._tab.removeTab(index)
+        self._reposition_plus()
 
     # ---------------- MODIFIED HANDLING ----------------
 

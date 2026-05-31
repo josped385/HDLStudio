@@ -631,7 +631,7 @@ class MainWindow(QMainWindow):
         self.hierarchy_dock.apply_theme(colors)
 
         self.editor_tabs._find_bar.apply_theme(colors)
-        self.editor_tabs._style_plus_tab_bar()
+        self.editor_tabs._style_tab_buttons()
         for tab in self.editor_tabs.tabs.values():
             tab.editor.apply_theme_from_colors(colors)
 
