@@ -605,6 +605,7 @@ class MainWindow(QMainWindow):
         self.signal_dock.apply_theme(colors)
         self.template_dock.apply_theme(colors)
 
+        self.editor_tabs._find_bar.apply_theme(colors)
         self.editor_tabs._style_plus_tab_bar()
         for tab in self.editor_tabs.tabs.values():
             tab.editor.apply_theme_from_colors(colors)

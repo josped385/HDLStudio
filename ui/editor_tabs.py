@@ -1,9 +1,13 @@
 import os
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QFont
-from PyQt6.QtWidgets import QTabWidget, QTabBar, QMessageBox, QPushButton
+from PyQt6.QtGui import QIcon, QFont, QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
+    QTabWidget, QTabBar, QMessageBox, QPushButton,
+    QWidget, QVBoxLayout,
+)
 
 from ui.editor_tab import EditorTab
+from ui.find_replace import FindReplaceBar
 from themes.theme_manager import ThemeManager
 
 
@@ -55,7 +59,9 @@ class PlusTabBar(QTabBar):
         """)
 
 
-class EditorTabs(QTabWidget):
+class EditorTabs(QWidget):
+
+    currentChanged = pyqtSignal(int)
 
     def __init__(self, hover_db=None):
         super().__init__()
@@ -69,22 +75,46 @@ class EditorTabs(QTabWidget):
 
         self.untitled_counter = 0
 
-        self.tabCloseRequested.connect(self.close_tab)
-        self.currentChanged.connect(self._on_tab_changed)
+        # Tab widget
+        self._tab = QTabWidget()
+        self._tab.tabCloseRequested.connect(self.close_tab)
+        self._tab.currentChanged.connect(self._on_tab_changed)
+        self._tab.currentChanged.connect(self.currentChanged.emit)
+        self._tab.setTabsClosable(True)
+        self._tab.setMovable(True)
+        self._tab.setDocumentMode(True)
 
         self._setup_plus_tab_bar()
 
-        self.setTabsClosable(True)
-        self.setMovable(True)
-        self.setDocumentMode(True)
+        # Find/Replace bar
+        self._find_bar = FindReplaceBar(self)
 
-        self._style_plus_tab_bar()
+        # Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self._find_bar)
+        layout.addWidget(self._tab, 1)
+
+        # Shortcuts
+        self._find_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self._find_shortcut.activated.connect(self._show_find)
+
+        self._replace_shortcut = QShortcut(QKeySequence("Ctrl+H"), self)
+        self._replace_shortcut.activated.connect(self._show_replace)
 
     def _setup_plus_tab_bar(self):
-        bar = PlusTabBar(self)
+        bar = PlusTabBar(self._tab)
         bar.plusClicked.connect(self._on_new_tab)
-        self.setTabBar(bar)
+        self._tab.setTabBar(bar)
         self._plus_bar = bar
+
+    def _show_find(self):
+        self._find_bar.show_bar()
+
+    def _show_replace(self):
+        self._find_bar.show_bar()
+        self._find_bar._replace_input.setFocus()
 
     def _style_plus_tab_bar(self):
         c = ThemeManager.colors()
@@ -100,7 +130,7 @@ class EditorTabs(QTabWidget):
 
     def current_tab(self):
 
-        widget = self.currentWidget()
+        widget = self._tab.currentWidget()
 
         for tab in self.tabs.values():
             if tab.editor == widget:
@@ -146,13 +176,12 @@ class EditorTabs(QTabWidget):
             display_name = os.path.basename(path)
 
         # ---------------- ADD TAB ----------------
-        self.addTab(
+        self._tab.addTab(
             tab.editor,
             QIcon(ThemeManager.icon("file")),
             display_name
         )
-
-        self.setCurrentWidget(tab.editor)
+        self._tab.setCurrentWidget(tab.editor)
 
         tab.editor.apply_theme_from_colors()
 
@@ -172,13 +201,13 @@ class EditorTabs(QTabWidget):
         self.tabs[id(tab.editor)] = tab
 
         name = suggested_name or f"untitled-{self.untitled_counter}"
-        self.addTab(
+        self._tab.addTab(
             tab.editor,
             QIcon(ThemeManager.icon("file")),
             name
         )
 
-        self.setCurrentWidget(tab.editor)
+        self._tab.setCurrentWidget(tab.editor)
 
         if content:
             tab.editor.setText(content)
@@ -194,7 +223,7 @@ class EditorTabs(QTabWidget):
 
     def close_tab(self, index):
 
-        widget = self.widget(index)
+        widget = self._tab.widget(index)
 
         tab = None
         for t in self.tabs.values():
@@ -203,7 +232,7 @@ class EditorTabs(QTabWidget):
                 break
 
         if not tab:
-            self.removeTab(index)
+            self._tab.removeTab(index)
             return
 
         # 🔥 CHECK MODIFIED STATE
@@ -237,7 +266,7 @@ class EditorTabs(QTabWidget):
                 self._hover_db.remove_file(key_to_remove)
             del self.tabs[key_to_remove]
 
-        self.removeTab(index)
+        self._tab.removeTab(index)
 
     # ---------------- MODIFIED HANDLING ----------------
 
@@ -248,14 +277,14 @@ class EditorTabs(QTabWidget):
         if index == -1:
             return
 
-        name = self.tabText(index)
+        name = self._tab.tabText(index)
 
         if modified:
             if not name.endswith("*"):
-                self.setTabText(index, name + "*")
+                self._tab.setTabText(index, name + "*")
         else:
             if name.endswith("*"):
-                self.setTabText(index, name[:-1])
+                self._tab.setTabText(index, name[:-1])
 
     # ---------------- TAB CHANGE ----------------
 
@@ -319,7 +348,7 @@ class EditorTabs(QTabWidget):
         index = self._find_tab_index(tab.editor)
 
         if index != -1:
-            self.setTabText(index, tab.filename)
+            self._tab.setTabText(index, tab.filename)
 
     def _rekey_tab(self, tab, new_key):
 
@@ -333,11 +362,22 @@ class EditorTabs(QTabWidget):
             del self.tabs[old_key]
             self.tabs[new_key] = tab
 
+    # ---------------- TAB ICON / COUNT HELPERS ----------------
+
+    def count(self):
+        return self._tab.count()
+
+    def setTabIcon(self, index, icon):
+        self._tab.setTabIcon(index, icon)
+
+    def setCurrentWidget(self, widget):
+        self._tab.setCurrentWidget(widget)
+
     # ---------------- UTIL ----------------
 
     def _find_tab_index(self, widget):
 
-        for i in range(self.count()):
-            if self.widget(i) == widget:
+        for i in range(self._tab.count()):
+            if self._tab.widget(i) == widget:
                 return i
         return -1
