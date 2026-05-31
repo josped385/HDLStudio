@@ -77,11 +77,19 @@ class ActivityBar(QToolBar):
         self.templates_btn.setCheckable(True)
         self.templates_btn.triggered.connect(self._on_templates)
 
+        self.git_btn = self.addAction(
+            QIcon("assets/icons/git.svg"),
+            "Git"
+        )
+        self.git_btn.setCheckable(True)
+        self.git_btn.triggered.connect(self._on_git)
+
     def _uncheck_all(self):
         self.explorer_btn.setChecked(False)
         self.hierarchy_btn.setChecked(False)
         self.connections_btn.setChecked(False)
         self.templates_btn.setChecked(False)
+        self.git_btn.setChecked(False)
 
     def _on_hierarchy(self):
         self._uncheck_all()
@@ -102,3 +110,8 @@ class ActivityBar(QToolBar):
         self._uncheck_all()
         self.templates_btn.setChecked(True)
         self.main._show_activity_panel("templates")
+
+    def _on_git(self):
+        self._uncheck_all()
+        self.git_btn.setChecked(True)
+        self.main._show_activity_panel("git")

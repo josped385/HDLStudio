@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
 
 from ui.docks.file_explorer_dock import FileExplorerDock
+from ui.docks.git_dock import GitDock
 from ui.docks.hierarchy_dock import HierarchyDock
 from ui.docks.signal_dock import SignalDock
 from ui.docks.terminal_dock import TerminalDock
@@ -62,6 +63,7 @@ class MainWindow(QMainWindow):
         self._setup_connections()
         self._setup_templates()
         self._setup_hierarchy()
+        self._setup_git()
         self._setup_terminal()
         self._setup_status_bar()
 
@@ -125,6 +127,7 @@ class MainWindow(QMainWindow):
         self.template_dock.hide()
         self.file_explorer_dock.hide()
         self.hierarchy_dock.hide()
+        self.git_dock.hide()
 
         if panel == "explorer":
             self.file_explorer_dock.show()
@@ -135,6 +138,9 @@ class MainWindow(QMainWindow):
         elif panel == "hierarchy":
             self.hierarchy_dock.show()
             self.hierarchy_dock.raise_()
+        elif panel == "git":
+            self.git_dock.show()
+            self.git_dock.raise_()
         else:
             self.signal_dock.show()
             self.signal_dock.raise_()
@@ -198,6 +204,19 @@ class MainWindow(QMainWindow):
         )
 
         self.hierarchy_dock.hide()
+
+    # ---------------- GIT ----------------
+
+    def _setup_git(self):
+
+        self.git_dock = GitDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.git_dock
+        )
+
+        self.git_dock.hide()
 
     # ---------------- TERMINAL ----------------
 
@@ -418,6 +437,7 @@ class MainWindow(QMainWindow):
             for f in glob.glob(os.path.join(root, "**", ext), recursive=True):
                 self.hover_db.add_file(f)
         self.hierarchy_dock.update_from_project(self.project)
+        self.git_dock.set_root(root)
 
     def _warn_if_no_iverilog(self):
 
@@ -593,6 +613,7 @@ class MainWindow(QMainWindow):
             "hierarchy": self.activity_bar.hierarchy_btn,
             "connections": self.activity_bar.connections_btn,
             "templates": self.activity_bar.templates_btn,
+            "git": self.activity_bar.git_btn,
         }
         for name, action in icon_map.items():
             action.setIcon(QIcon(TM.icon(name)))
@@ -629,6 +650,7 @@ class MainWindow(QMainWindow):
         self.signal_dock.apply_theme(colors)
         self.template_dock.apply_theme(colors)
         self.hierarchy_dock.apply_theme(colors)
+        self.git_dock.apply_theme(colors)
 
         self.editor_tabs._find_bar.apply_theme(colors)
         self.editor_tabs._style_tab_buttons()
