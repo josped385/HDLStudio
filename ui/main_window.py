@@ -8,7 +8,7 @@ from ui.docks.file_explorer_dock import FileExplorerDock
 from ui.docks.git_dock import GitDock
 from ui.docks.hierarchy_dock import HierarchyDock
 from ui.docks.signal_dock import SignalDock
-from ui.docks.terminal_dock import TerminalDock
+from ui.docks.bottom_panel import BottomPanel
 from ui.docks.template_dock import TemplateDock
 from ui.editor_tabs import EditorTabs
 from ui.panels.status_bar import IDEStatusBar
@@ -224,11 +224,10 @@ class MainWindow(QMainWindow):
 
     def _setup_terminal(self):
 
-        self.terminal_dock = TerminalDock(self)
-
+        self.bottom_panel = BottomPanel(self)
         self.addDockWidget(
             Qt.DockWidgetArea.BottomDockWidgetArea,
-            self.terminal_dock
+            self.bottom_panel
         )
 
     # ---------------- STATUS BAR ----------------
@@ -350,11 +349,13 @@ class MainWindow(QMainWindow):
 
         self.editor_tabs.open_file(path)
         self._refresh_build_context(path)
+        self.bottom_panel.append_history(f"Opened file: {os.path.basename(path)}")
 
     def open_project_file(self, path):
 
         self.editor_tabs.open_file(path)
         self._refresh_build_context(path)
+        self.bottom_panel.append_history(f"Opened file: {os.path.basename(path)}")
 
     def compile_file(self, path):
         self._ensure_files_saved()
@@ -372,13 +373,15 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Compiling...")
-        self.terminal_dock.output.append("=" * 50 + "\n")
-        self.terminal_dock.output.append(f">> COMPILING: {os.path.basename(path)}\n\n")
+        self.bottom_panel.console.append("=" * 50 + "\n")
+        self.bottom_panel.console.append(f">> COMPILING: {os.path.basename(path)}\n\n")
 
         def write(text):
-            self.terminal_dock.output.append(text)
+            self.bottom_panel.console.append(text)
 
         ok = self.build_system.compile(write, output_path=vvp_path)
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.append_history(f"Compiled {os.path.basename(path)}")
         self.status.showMessage("Compilation successful" if ok else "Compilation failed")
 
     def run_file(self, path):
@@ -394,13 +397,14 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Running...")
-        self.terminal_dock.output.append("=" * 50 + "\n")
-        self.terminal_dock.output.append(f">> RUNNING: {os.path.basename(path)}\n\n")
+        self.bottom_panel.console.append("=" * 50 + "\n")
+        self.bottom_panel.console.append(f">> RUNNING: {os.path.basename(path)}\n\n")
 
         def write(text):
-            self.terminal_dock.output.append(text)
+            self.bottom_panel.console.append(text)
 
         ok = self.build_system.run(write, vvp_path=path)
+        self.bottom_panel.append_history(f"Ran {os.path.basename(path)}")
 
         if ok:
             generated = self.build_system.last_vcd_path
@@ -574,14 +578,15 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Compiling...")
-        self.terminal_dock.output.append("=" * 50 + "\n")
-        self.terminal_dock.output.append(">> COMPILING\n\n")
+        self.bottom_panel.console.append("=" * 50 + "\n")
+        self.bottom_panel.console.append(">> COMPILING\n\n")
 
         def write(text):
-            self.terminal_dock.output.append(text)
+            self.bottom_panel.console.append(text)
 
         ok = self.build_system.compile(write, output_path=path)
 
+        self.bottom_panel.append_history("Compiled project")
         self.status.showMessage(
             "Compilation successful" if ok else "Compilation failed"
         )
@@ -608,13 +613,14 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Running...")
-        self.terminal_dock.output.append("=" * 50 + "\n")
-        self.terminal_dock.output.append(">> RUNNING SIMULATION\n\n")
+        self.bottom_panel.console.append("=" * 50 + "\n")
+        self.bottom_panel.console.append(">> RUNNING SIMULATION\n\n")
 
         def write(text):
-            self.terminal_dock.output.append(text)
+            self.bottom_panel.console.append(text)
 
         ok = self.build_system.run(write, vvp_path=vvp_path)
+        self.bottom_panel.append_history("Ran project simulation")
 
         if ok:
             generated = self.build_system.last_vcd_path
@@ -657,8 +663,8 @@ class MainWindow(QMainWindow):
 
     def toggle_terminal(self):
 
-        visible = self.terminal_dock.isVisible()
-        self.terminal_dock.setVisible(not visible)
+        visible = self.bottom_panel.isVisible()
+        self.bottom_panel.setVisible(not visible)
 
     def toggle_explorer(self):
 
@@ -710,7 +716,7 @@ class MainWindow(QMainWindow):
 
         self.activity_bar.apply_theme(colors)
         self.toolbar.apply_theme(colors)
-        self.terminal_dock.apply_theme(colors)
+        self.bottom_panel.apply_theme(colors)
         self.signal_dock.apply_theme(colors)
         self.template_dock.apply_theme(colors)
         self.hierarchy_dock.apply_theme(colors)
