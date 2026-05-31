@@ -18,6 +18,8 @@ class ActivityBar(QToolBar):
 
         from themes.theme_manager import ThemeManager
         self.apply_theme(ThemeManager.colors())
+        # Start with explorer checked
+        self.explorer_btn.setChecked(True)
 
     def apply_theme(self, colors):
         self.setStyleSheet(f"""
@@ -54,6 +56,13 @@ class ActivityBar(QToolBar):
         self.explorer_btn.setChecked(True)
         self.explorer_btn.triggered.connect(self._on_explorer)
 
+        self.hierarchy_btn = self.addAction(
+            QIcon("assets/icons/hierarchy.svg"),
+            "Hierarchy"
+        )
+        self.hierarchy_btn.setCheckable(True)
+        self.hierarchy_btn.triggered.connect(self._on_hierarchy)
+
         self.connections_btn = self.addAction(
             QIcon("assets/icons/connections.svg"),
             "Connections"
@@ -68,20 +77,28 @@ class ActivityBar(QToolBar):
         self.templates_btn.setCheckable(True)
         self.templates_btn.triggered.connect(self._on_templates)
 
-    def _on_explorer(self):
-        self.explorer_btn.setChecked(True)
+    def _uncheck_all(self):
+        self.explorer_btn.setChecked(False)
+        self.hierarchy_btn.setChecked(False)
         self.connections_btn.setChecked(False)
         self.templates_btn.setChecked(False)
+
+    def _on_hierarchy(self):
+        self._uncheck_all()
+        self.hierarchy_btn.setChecked(True)
+        self.main._show_activity_panel("hierarchy")
+
+    def _on_explorer(self):
+        self._uncheck_all()
+        self.explorer_btn.setChecked(True)
         self.main._show_activity_panel("explorer")
 
     def _on_connections(self):
-        self.explorer_btn.setChecked(False)
+        self._uncheck_all()
         self.connections_btn.setChecked(True)
-        self.templates_btn.setChecked(False)
         self.main._show_activity_panel("connections")
 
     def _on_templates(self):
-        self.explorer_btn.setChecked(False)
-        self.connections_btn.setChecked(False)
+        self._uncheck_all()
         self.templates_btn.setChecked(True)
         self.main._show_activity_panel("templates")

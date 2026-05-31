@@ -1,7 +1,7 @@
 import os
 
 from PyQt6.QtCore import pyqtSignal, Qt, QFile
-from PyQt6.QtGui import QFileSystemModel, QGuiApplication
+from PyQt6.QtGui import QFileSystemModel, QGuiApplication, QIcon
 from PyQt6.QtWidgets import QTreeView, QMenu, QMessageBox
 
 
@@ -11,6 +11,15 @@ class FileExplorer(QTreeView):
     compile_requested = pyqtSignal(str)
     run_requested = pyqtSignal(str)
     wave_requested = pyqtSignal(str)
+
+    _icons_loaded = False
+    _icon_open = None
+    _icon_copy = None
+    _icon_cut = None
+    _icon_delete = None
+    _icon_compile = None
+    _icon_run = None
+    _icon_wave = None
 
     def __init__(self, root_path="."):
         super().__init__()
@@ -44,28 +53,47 @@ class FileExplorer(QTreeView):
             return path
         return None
 
+    def _ensure_icons(self):
+        if self._icons_loaded:
+            return
+        self._load_icons()
+        self._icons_loaded = True
+
+    def _load_icons(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base = os.path.join(root, "assets", "icons")
+        self._icon_open = QIcon(os.path.join(base, "file.svg"))
+        self._icon_copy = QIcon(os.path.join(base, "file.svg"))
+        self._icon_cut = QIcon(os.path.join(base, "file.svg"))
+        self._icon_delete = QIcon(os.path.join(base, "delete.svg"))
+        self._icon_compile = QIcon(os.path.join(base, "compile.svg"))
+        self._icon_run = QIcon(os.path.join(base, "play.svg"))
+        self._icon_wave = QIcon(os.path.join(base, "wave.svg"))
+
     def _show_context_menu(self, pos):
         path = self._file_under_menu(pos)
         if not path:
             return
 
+        self._ensure_icons()
+
         menu = QMenu(self)
         ext = os.path.splitext(path)[1].lower()
 
-        open_action = menu.addAction("Open")
+        open_action = menu.addAction(self._icon_open, "Open")
         show_action = menu.addAction("Show in Explorer")
         menu.addSeparator()
-        copy_action = menu.addAction("Copy")
-        cut_action = menu.addAction("Cut")
-        delete_action = menu.addAction("Delete")
+        copy_action = menu.addAction(self._icon_copy, "Copy")
+        cut_action = menu.addAction(self._icon_cut, "Cut")
+        delete_action = menu.addAction(self._icon_delete, "Delete")
         menu.addSeparator()
 
         if ext in (".v", ".sv", ".vhd", ".vhdl"):
-            compile_action = menu.addAction("Compile")
+            compile_action = menu.addAction(self._icon_compile, "Compile")
         elif ext == ".vvp":
-            run_action = menu.addAction("Run")
+            run_action = menu.addAction(self._icon_run, "Run")
         elif ext in (".vcd", ".fst", ".lxt", ".lxt2", ".ghw"):
-            wave_action = menu.addAction("View Waves")
+            wave_action = menu.addAction(self._icon_wave, "View Waves")
 
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
 

@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
 
 from ui.docks.file_explorer_dock import FileExplorerDock
+from ui.docks.hierarchy_dock import HierarchyDock
 from ui.docks.signal_dock import SignalDock
 from ui.docks.terminal_dock import TerminalDock
 from ui.docks.template_dock import TemplateDock
@@ -60,6 +61,7 @@ class MainWindow(QMainWindow):
         self._setup_file_explorer()
         self._setup_connections()
         self._setup_templates()
+        self._setup_hierarchy()
         self._setup_terminal()
         self._setup_status_bar()
 
@@ -122,6 +124,7 @@ class MainWindow(QMainWindow):
         self.signal_dock.hide()
         self.template_dock.hide()
         self.file_explorer_dock.hide()
+        self.hierarchy_dock.hide()
 
         if panel == "explorer":
             self.file_explorer_dock.show()
@@ -129,6 +132,9 @@ class MainWindow(QMainWindow):
         elif panel == "templates":
             self.template_dock.show()
             self.template_dock.raise_()
+        elif panel == "hierarchy":
+            self.hierarchy_dock.show()
+            self.hierarchy_dock.raise_()
         else:
             self.signal_dock.show()
             self.signal_dock.raise_()
@@ -180,6 +186,19 @@ class MainWindow(QMainWindow):
     def _on_template_new_file(self, filename, code):
         self.editor_tabs.new_file(content=code, suggested_name=filename)
 
+    # ---------------- HIERARCHY ----------------
+
+    def _setup_hierarchy(self):
+
+        self.hierarchy_dock = HierarchyDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.hierarchy_dock
+        )
+
+        self.hierarchy_dock.hide()
+
     # ---------------- TERMINAL ----------------
 
     def _setup_terminal(self):
@@ -205,8 +224,10 @@ class MainWindow(QMainWindow):
         tab = self.editor_tabs.current_tab()
         if tab and tab.path:
             self.signal_dock.update_from_file(tab.path)
+            self.hierarchy_dock.update_from_file(tab.path)
         else:
             self.signal_dock.update_from_file(None)
+            self.hierarchy_dock.update_from_file(None)
 
     # ---------------- FILE CONTEXT ----------------
 
@@ -228,6 +249,7 @@ class MainWindow(QMainWindow):
         self.build_system.auto_select_files()
         self.toolbar.refresh_file_lists()
         self.signal_dock.update_from_file(filepath)
+        self.hierarchy_dock.update_from_file(filepath)
 
     # ---------------- ACTIONS ----------------
 
@@ -395,6 +417,7 @@ class MainWindow(QMainWindow):
         for ext in ("*.v", "*.sv", "*.vhd", "*.vhdl"):
             for f in glob.glob(os.path.join(root, "**", ext), recursive=True):
                 self.hover_db.add_file(f)
+        self.hierarchy_dock.update_from_project(self.project)
 
     def _warn_if_no_iverilog(self):
 
@@ -567,6 +590,7 @@ class MainWindow(QMainWindow):
         from themes.theme_manager import ThemeManager as TM
         icon_map = {
             "file_explorer": self.activity_bar.explorer_btn,
+            "hierarchy": self.activity_bar.hierarchy_btn,
             "connections": self.activity_bar.connections_btn,
             "templates": self.activity_bar.templates_btn,
         }
@@ -604,6 +628,7 @@ class MainWindow(QMainWindow):
         self.terminal_dock.apply_theme(colors)
         self.signal_dock.apply_theme(colors)
         self.template_dock.apply_theme(colors)
+        self.hierarchy_dock.apply_theme(colors)
 
         self.editor_tabs._find_bar.apply_theme(colors)
         self.editor_tabs._style_plus_tab_bar()
