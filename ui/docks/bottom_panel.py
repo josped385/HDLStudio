@@ -1,12 +1,24 @@
 import os
+import re
 import datetime
-from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtCore import QProcess, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import (
-    QDockWidget, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QTabWidget
+    QDockWidget, QWidget, QVBoxLayout, QTextEdit, QTextBrowser, QLineEdit, QTabWidget
+)
+
+
+_ERROR_LINE_RE = re.compile(
+    r'^(.+)'         # file path (greedy — handles Windows drive letters)
+    r':(\d+):'       # line number
+    r'\s*(error|warning|syntax)\s*:\s*(.*)',
+    re.IGNORECASE
 )
 
 
 class BottomPanel(QDockWidget):
+
+    error_clicked = pyqtSignal(str, int)  # filepath, lineno
 
     def __init__(self, parent=None):
         super().__init__("Output", parent)
@@ -23,8 +35,11 @@ class BottomPanel(QDockWidget):
         self.tabs = QTabWidget()
 
         # ── Console tab ──────────────────────────────────
-        self.console = QTextEdit()
+        self.console = QTextBrowser()
         self.console.setReadOnly(True)
+        self.console.setOpenExternalLinks(False)
+        self.console.setOpenLinks(False)
+        self.console.anchorClicked.connect(self._on_console_link)
         self.tabs.addTab(self.console, "Console")
 
         # ── Terminal tab ─────────────────────────────────
@@ -54,16 +69,134 @@ class BottomPanel(QDockWidget):
         layout.addWidget(self.tabs)
         self.setWidget(container)
 
-        self.terminal_out.append("HDLStudio terminal initialized\n")
+        self.terminal_out.append("HDLStudio terminal initialized")
 
-    # ── public helpers ────────────────────────────────
+    # ══════════════════════════════════════════════════════
+    #  Professional console helpers
+    # ══════════════════════════════════════════════════════
+
+    def _html(self, text, color="", bold=False, mono=False):
+        parts = []
+        if color:
+            parts.append(f'<span style="color:{color}">')
+        if bold:
+            parts.append("<b>")
+        if mono:
+            parts.append('<span style="font-family:Consolas,monospace">')
+        parts.append(text)
+        if mono:
+            parts.append("</span>")
+        if bold:
+            parts.append("</b>")
+        if color:
+            parts.append("</span>")
+        return "".join(parts)
+
+    def _append_html(self, html):
+        try:
+            cursor = self.console.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertHtml(html)
+            self.console.setTextCursor(cursor)
+            sb = self.console.verticalScrollBar()
+            sb.setValue(sb.maximum())
+        except Exception as e:
+            self.console.append(f"[display error: {e}]")
+
+    def write_header(self, title):
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        h = (
+            f'<br><span style="color:#888;">{"═" * 50}</span><br>'
+            f'<b style="font-size:11pt;">  {_escape(title)}</b><br>'
+            f'<span style="color:#888;">  {_escape(ts)}</span><br>'
+            f'<span style="color:#888;">{"═" * 50}</span><br><br>'
+        )
+        self._append_html(h)
+
+    def write_cmd(self, text):
+        self._append_html(
+            f'<span style="color:#888;font-family:Consolas,monospace;">'
+            f'$ {text}</span><br>'
+        )
+
+    def write_info(self, text):
+        self._append_html(
+            f'<span style="color:#ccc;">{text}</span><br>'
+        )
+
+    def write_ok(self, text):
+        self._append_html(
+            f'<span style="color:#4ec9b0;font-weight:bold;">'
+            f'✔  {text}</span><br>'
+        )
+
+    def write_error(self, text):
+        self._append_html(
+            f'<span style="color:#f44747;font-weight:bold;">'
+            f'✖  {text}</span><br>'
+        )
+
+    def write_warning(self, text):
+        self._append_html(
+            f'<span style="color:#dcdcaa;">'
+            f'⚠  {text}</span><br>'
+        )
+
+    def write_line(self, text, color=None):
+        if color:
+            self._append_html(f'<span style="color:{color};">{text}</span><br>')
+        else:
+            self._append_html(f'<span>{text}</span><br>')
+
+    def write_raw(self, text):
+        try:
+            for line in text.split("\n"):
+                line = _escape(line)
+                if not line:
+                    self._append_html("<br>")
+                    continue
+                m = _ERROR_LINE_RE.match(line)
+                if m:
+                    fpath, lno, etype = m.group(1), m.group(2), m.group(3)
+                    fpath_norm = fpath.replace("\\", "/")
+                    uri = f"hdl:///{fpath_norm}#{lno}"
+                    color = "#f44747" if etype.lower() == "error" else "#dcdcaa"
+                    self._append_html(
+                        f'<a href="{uri}" style="color:{color};text-decoration:none;">'
+                        f'<span style="font-family:Consolas,monospace;">'
+                        f'{line}</span></a><br>'
+                    )
+                else:
+                    self._append_html(
+                        f'<span style="font-family:Consolas,monospace;">'
+                        f'{line}</span><br>'
+                    )
+        except Exception as e:
+            self.console.append(f"[write error: {e}]")
+
+    def clear_console(self):
+        self.console.clear()
+
+    # ── Error link handling ──────────────────────────────
+
+    def _on_console_link(self, url):
+        try:
+            path = url.path()
+            lineno_str = url.fragment()
+            if path and lineno_str:
+                lineno = int(lineno_str)
+                # Strip leading slash from Windows paths like /C:/...
+                if path.startswith("/") and len(path) > 2 and path[2] == ":":
+                    path = path[1:]
+                self.error_clicked.emit(path, lineno)
+        except (ValueError, TypeError):
+            pass
+
+    # ── Generic helpers ────────────────────────────────
 
     def clear(self):
         self.console.clear()
         self.terminal_out.clear()
-
-    def clear_console(self):
-        self.console.clear()
 
     def append_history(self, action):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
@@ -104,6 +237,8 @@ class BottomPanel(QDockWidget):
             background-color: {colors["terminal_bg"]};
             color: {colors["terminal_text"]};
             border: none;
+            font-family: Consolas, monospace;
+            font-size: 10pt;
         """
         self.console.setStyleSheet(css_console)
         self.terminal_out.setStyleSheet(css_console)
@@ -114,6 +249,7 @@ class BottomPanel(QDockWidget):
             color: {colors["text"]};
             border: 1px solid {colors["panel_hover"]};
             padding: 4px;
+            font-family: Consolas, monospace;
         """)
 
     # ── terminal command execution ────────────────────
@@ -122,7 +258,7 @@ class BottomPanel(QDockWidget):
         cmd = self.terminal_in.text().strip()
         if not cmd:
             return
-        self.terminal_out.append(f"> {cmd}\n")
+        self.terminal_out.append(f"> {cmd}")
         self.terminal_in.clear()
 
         if self._process and self._process.state() == QProcess.ProcessState.Running:
@@ -141,14 +277,18 @@ class BottomPanel(QDockWidget):
 
     def _read_stdout(self):
         data = self._process.readAllStandardOutput().data().decode(errors="replace")
-        self.terminal_out.append(data)
+        self.terminal_out.append(data.rstrip())
 
     def _read_stderr(self):
         data = self._process.readAllStandardError().data().decode(errors="replace")
-        self.terminal_out.append(f"[ERR] {data}")
+        self.terminal_out.append(f"[ERR] {data}".rstrip())
 
     def _on_finished(self, exit_code, exit_status):
         if exit_code != 0:
-            self.terminal_out.append(f"\nProcess exited with code {exit_code}\n")
+            self.terminal_out.append(f"\nProcess exited with code {exit_code}")
         else:
-            self.terminal_out.append("\n")
+            self.terminal_out.append("")
+
+
+def _escape(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

@@ -534,6 +534,12 @@ class CodeEditor(QsciScintilla):
 
         self._force_apply_theme()
 
+    def set_error_lines(self, line_numbers):
+        pass
+
+    def clear_error_markers(self):
+        pass
+
     def _setup_autocompletion(self):
 
         self.setAutoCompletionSource(

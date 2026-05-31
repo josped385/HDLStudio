@@ -1,4 +1,5 @@
 import os
+import re
 
 from PyQt6.QtCore import Qt, QSize, QEvent
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
@@ -229,6 +230,7 @@ class MainWindow(QMainWindow):
             Qt.DockWidgetArea.BottomDockWidgetArea,
             self.bottom_panel
         )
+        self.bottom_panel.error_clicked.connect(self._on_error_clicked)
 
     # ---------------- STATUS BAR ----------------
 
@@ -252,6 +254,24 @@ class MainWindow(QMainWindow):
     def _on_go_to_definition(self, filepath, lineno):
 
         self.open_project_file(filepath)
+
+    def _on_error_clicked(self, filepath, lineno):
+        # Normalize path — handle forward slashes and relative paths
+        filepath = filepath.replace("/", "\\")
+        if not os.path.isabs(filepath):
+            filepath = os.path.abspath(os.path.join(self.project.root_path or "", filepath))
+        filepath = os.path.normpath(filepath)
+
+        self.open_project_file(filepath)
+        tab = self.editor_tabs.tabs.get(filepath)
+        if tab:
+            ed = tab.editor
+            ed.setCursorPosition(lineno - 1, 0)
+            ed.ensureLineVisible(lineno - 1)
+
+    def _clear_all_error_markers(self):
+        for fpath, tab in self.editor_tabs.tabs.items():
+            tab.editor.clear_error_markers()
         tab = self.editor_tabs.current_tab()
         if tab:
             tab.editor.setCursorPosition(lineno - 1, 0)
@@ -357,6 +377,33 @@ class MainWindow(QMainWindow):
         self._refresh_build_context(path)
         self.bottom_panel.append_history(f"Opened file: {os.path.basename(path)}")
 
+    def _parse_and_mark_errors(self, raw_output):
+        errors_by_file = {}
+        # Greedy (.+) to handle Windows paths with drive letters
+        pat = re.compile(r'^(.+):(\d+):\s*(error|warning|syntax)\s*:\s*(.*)', re.IGNORECASE)
+        for line in raw_output.split("\n"):
+            m = pat.match(line)
+            if m:
+                fpath = m.group(1).strip()
+                try:
+                    lineno = int(m.group(2))
+                except ValueError:
+                    continue
+                if not os.path.isabs(fpath):
+                    fpath = os.path.abspath(os.path.join(self.project.root_path or "", fpath))
+                else:
+                    fpath = os.path.normpath(fpath)
+                if fpath not in errors_by_file:
+                    errors_by_file[fpath] = set()
+                errors_by_file[fpath].add(lineno)
+        for fpath, lines in errors_by_file.items():
+            tab = self.editor_tabs.tabs.get(fpath)
+            if tab:
+                try:
+                    tab.editor.set_error_lines(sorted(lines))
+                except Exception:
+                    pass
+
     def compile_file(self, path):
         self._ensure_files_saved()
         self._refresh_build_context(path)
@@ -373,16 +420,24 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Compiling...")
-        self.bottom_panel.console.append("=" * 50 + "\n")
-        self.bottom_panel.console.append(f">> COMPILING: {os.path.basename(path)}\n\n")
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header(f"COMPILING: {os.path.basename(path)}")
+
+        raw_buf = []
 
         def write(text):
-            self.bottom_panel.console.append(text)
+            raw_buf.append(text)
+            self.bottom_panel.write_raw(text)
 
         ok = self.build_system.compile(write, output_path=vvp_path)
-        self.bottom_panel.tabs.setCurrentIndex(0)
         self.bottom_panel.append_history(f"Compiled {os.path.basename(path)}")
-        self.status.showMessage("Compilation successful" if ok else "Compilation failed")
+        if ok:
+            self.bottom_panel.write_ok("Compilation successful")
+            self.status.showMessage("Compilation successful")
+        else:
+            self.bottom_panel.write_error("Compilation failed")
+            self.status.showMessage("Compilation failed")
 
     def run_file(self, path):
         self._ensure_files_saved()
@@ -397,11 +452,10 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Running...")
-        self.bottom_panel.console.append("=" * 50 + "\n")
-        self.bottom_panel.console.append(f">> RUNNING: {os.path.basename(path)}\n\n")
+        self.bottom_panel.write_header(f"RUNNING: {os.path.basename(path)}")
+        self.bottom_panel.tabs.setCurrentIndex(0)
 
-        def write(text):
-            self.bottom_panel.console.append(text)
+        write = self.bottom_panel.write_raw
 
         ok = self.build_system.run(write, vvp_path=path)
         self.bottom_panel.append_history(f"Ran {os.path.basename(path)}")
@@ -578,18 +632,24 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Compiling...")
-        self.bottom_panel.console.append("=" * 50 + "\n")
-        self.bottom_panel.console.append(">> COMPILING\n\n")
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header("COMPILING PROJECT")
+
+        raw_buf = []
 
         def write(text):
-            self.bottom_panel.console.append(text)
+            raw_buf.append(text)
+            self.bottom_panel.write_raw(text)
 
         ok = self.build_system.compile(write, output_path=path)
-
         self.bottom_panel.append_history("Compiled project")
-        self.status.showMessage(
-            "Compilation successful" if ok else "Compilation failed"
-        )
+        if ok:
+            self.bottom_panel.write_ok("Compilation successful")
+            self.status.showMessage("Compilation successful")
+        else:
+            self.bottom_panel.write_error("Compilation failed")
+            self.status.showMessage("Compilation failed")
 
     def run_project(self):
 
@@ -613,11 +673,10 @@ class MainWindow(QMainWindow):
             return
 
         self.status.showMessage("Running...")
-        self.bottom_panel.console.append("=" * 50 + "\n")
-        self.bottom_panel.console.append(">> RUNNING SIMULATION\n\n")
+        self.bottom_panel.write_header("RUNNING SIMULATION")
+        self.bottom_panel.tabs.setCurrentIndex(0)
 
-        def write(text):
-            self.bottom_panel.console.append(text)
+        write = self.bottom_panel.write_raw
 
         ok = self.build_system.run(write, vvp_path=vvp_path)
         self.bottom_panel.append_history("Ran project simulation")
