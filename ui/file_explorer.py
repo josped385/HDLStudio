@@ -11,6 +11,7 @@ class FileExplorer(QTreeView):
     compile_requested = pyqtSignal(str)
     run_requested = pyqtSignal(str)
     wave_requested = pyqtSignal(str)
+    gen_tb_requested = pyqtSignal(str)
 
     def __init__(self, root_path="."):
         super().__init__()
@@ -66,6 +67,7 @@ class FileExplorer(QTreeView):
 
         if ext in (".v", ".sv", ".vhd", ".vhdl"):
             compile_action = menu.addAction(self._icon("compile"), "Compile")
+            gen_tb_action = menu.addAction("Generate Testbench")
         elif ext == ".vvp":
             run_action = menu.addAction(self._icon("play"), "Run")
         elif ext in (".vcd", ".fst", ".lxt", ".lxt2", ".ghw"):
@@ -83,13 +85,15 @@ class FileExplorer(QTreeView):
             self._cut_path(path)
         elif chosen == delete_action:
             self._delete_path(path)
-        elif chosen in menu.actions() and chosen.text() in ("Compile", "Run", "View Waves"):
+        elif chosen in menu.actions() and chosen.text() in ("Compile", "Run", "View Waves", "Generate Testbench"):
             if chosen.text() == "Compile":
                 self.compile_requested.emit(path)
             elif chosen.text() == "Run":
                 self.run_requested.emit(path)
             elif chosen.text() == "View Waves":
                 self.wave_requested.emit(path)
+            elif chosen.text() == "Generate Testbench":
+                self.gen_tb_requested.emit(path)
 
     def _show_in_explorer(self, path):
         folder = os.path.dirname(path)

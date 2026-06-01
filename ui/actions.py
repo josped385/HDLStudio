@@ -44,8 +44,11 @@ class IDEActions:
         self.view_waves = QAction(QIcon("assets/icons/wave.svg"), "View Waves", main_window)
         self.view_waves.setShortcut(QKeySequence("F7"))
 
-        # ---------------- THEME ----------------
+        # ---------------- TOOLS ----------------
+        self.gen_tb = QAction("Generate Testbench", main_window)
+        self.gen_tb.setShortcut(QKeySequence("Ctrl+Shift+G"))
 
+        # ---------------- THEME ----------------
         self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
         self.toggle_theme.setShortcut(QKeySequence("Ctrl+Shift+T"))
         self.toggle_theme.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
@@ -70,4 +73,6 @@ class IDEActions:
         self.toggle_explorer.triggered.connect(self.main.toggle_explorer)
         self.view_waves.triggered.connect(self.main.view_waves)
 
+        self.gen_tb.triggered.connect(lambda checked: self.main.generate_testbench())
         self.toggle_theme.triggered.connect(self.main.toggle_theme)
+

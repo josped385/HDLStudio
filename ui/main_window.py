@@ -87,6 +87,9 @@ class MainWindow(QMainWindow):
         build_menu.addAction(self.ide_actions.compile)
         build_menu.addAction(self.ide_actions.run)
 
+        tools_menu = menu.addMenu("Tools")
+        tools_menu.addAction(self.ide_actions.gen_tb)
+
         view_menu = menu.addMenu("View")
         view_menu.addAction(self.ide_actions.toggle_terminal)
         view_menu.addAction(self.ide_actions.toggle_explorer)
@@ -162,6 +165,7 @@ class MainWindow(QMainWindow):
         explorer.compile_requested.connect(self.compile_file)
         explorer.run_requested.connect(self.run_file)
         explorer.wave_requested.connect(self.open_wave_file)
+        explorer.gen_tb_requested.connect(self.generate_testbench)
 
     # ---------------- CONNECTIONS ----------------
 
@@ -656,6 +660,34 @@ class MainWindow(QMainWindow):
 
         visible = self.bottom_panel.isVisible()
         self.bottom_panel.setVisible(not visible)
+
+    def generate_testbench(self, path=None):
+
+        if path is None:
+            # Called from Tools menu — show file dialog
+            path, _ = QFileDialog.getOpenFileName(
+                self, "Select HDL file for testbench",
+                "",
+                "HDL Files (*.v *.sv *.vhd *.vhdl);;All Files (*)"
+            )
+            if not path:
+                return
+
+        if not os.path.isfile(path):
+            self.status.showMessage("No HDL file selected")
+            return
+
+        from core.testbench_generator import generate_testbench
+        try:
+            result = generate_testbench(path)
+            if result is None:
+                self.status.showMessage("Could not parse module/entity from file")
+                return
+            dst_file, code = result
+            self.editor_tabs.new_file(content=code, suggested_name=dst_file)
+            self.status.showMessage(f"Generated {dst_file}")
+        except Exception as e:
+            self.status.showMessage(f"Testbench generation failed: {e}")
 
     def toggle_explorer(self):
 

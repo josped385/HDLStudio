@@ -21,6 +21,7 @@ QMenuBar::item:selected {{
 QMenu {{
     background-color: {c["panel_bg"]};
     color: {c["text"]};
+    min-width: 240px;
 }}
 
 QMenu::item:selected {{
