@@ -39,6 +39,9 @@ Thumbs.db
 .coverage
 htmlcov/
 
+# Bundled binaries
+graphviz/
+
 # Temporary
 tmp/
 temp/

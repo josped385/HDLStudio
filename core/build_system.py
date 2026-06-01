@@ -1,6 +1,8 @@
 import os
 import glob
 import subprocess
+import tempfile
+import shutil
 
 
 HDLSTUDIO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -226,3 +228,86 @@ class BuildSystem:
 
         terminal_callback(f"Simulation exited with code {result.returncode}\n")
         return False
+
+    def yosys_available(self):
+        try:
+            from yowasp_yosys import run_yosys
+            return True
+        except ImportError:
+            return False
+
+    def synthesize(self, terminal_callback, filepath, output_path=None, synth_script=None):
+        if not self.yosys_available():
+            terminal_callback("yowasp-yosys not installed. Run: pip install yowasp-yosys\n")
+            return False
+
+        if not os.path.isfile(filepath):
+            terminal_callback(f"File not found: {filepath}\n")
+            return False
+
+        ext = os.path.splitext(filepath)[1].lower()
+        if ext in (".v", ".sv"):
+            read_cmd = "read_verilog"
+        elif ext in (".vhd", ".vhdl"):
+            read_cmd = "read_vhdl"
+        else:
+            terminal_callback(f"Unsupported file type: {ext}\n")
+            return False
+
+        from yowasp_yosys import run_yosys
+
+        src_name = os.path.basename(filepath)
+        base = os.path.splitext(src_name)[0]
+
+        if output_path is None:
+            out_dir = tempfile.mkdtemp(prefix="yosys_")
+        else:
+            out_dir = os.path.dirname(output_path)
+            os.makedirs(out_dir, exist_ok=True)
+
+        if synth_script is None:
+            synth_script = f"{read_cmd} {{input}}; synth; write_blif {{output}}"
+
+        work_dir = tempfile.mkdtemp(prefix="synth_")
+        try:
+            shutil.copy2(filepath, os.path.join(work_dir, src_name))
+            orig_cwd = os.getcwd()
+            os.chdir(work_dir)
+
+            out_name = f"{base}.blif"
+            script = synth_script.replace("{input}", src_name).replace("{output}", out_name)
+
+            terminal_callback(f"Running yosys on {src_name}...\n")
+            terminal_callback(f"  Script: {script}\n\n")
+
+            try:
+                run_yosys(["-p", script])
+            except SystemExit:
+                pass
+            except Exception as e:
+                terminal_callback(f"Yosys error: {e}\n")
+                os.chdir(orig_cwd)
+                return False
+
+            os.chdir(orig_cwd)
+
+            out_file = os.path.join(work_dir, out_name)
+            if os.path.isfile(out_file):
+                if output_path:
+                    shutil.copy2(out_file, output_path)
+                    terminal_callback(f"\nSynthesis output saved: {output_path}\n")
+                else:
+                    with open(out_file) as f:
+                        terminal_callback(f"\n--- {out_name} ---\n")
+                        terminal_callback(f.read())
+                return True
+            else:
+                # Check for other output formats
+                for f in os.listdir(work_dir):
+                    if f != src_name:
+                        terminal_callback(f"\nOutput file: {f}\n")
+                        with open(os.path.join(work_dir, f)) as fh:
+                            terminal_callback(fh.read())
+                return True
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)

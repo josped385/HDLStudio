@@ -48,6 +48,12 @@ class IDEActions:
         self.gen_tb = QAction("Generate Testbench", main_window)
         self.gen_tb.setShortcut(QKeySequence("Ctrl+Shift+G"))
 
+        self.synthesize = QAction(QIcon("assets/icons/compile.svg"), "Synthesize", main_window)
+        self.synthesize.setShortcut(QKeySequence("Ctrl+Shift+S"))
+
+        self.show_schematic = QAction("Show Schematic", main_window)
+        self.show_schematic.setShortcut(QKeySequence("Ctrl+Shift+D"))
+
         # ---------------- THEME ----------------
         self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
         self.toggle_theme.setShortcut(QKeySequence("Ctrl+Shift+T"))
@@ -74,5 +80,7 @@ class IDEActions:
         self.view_waves.triggered.connect(self.main.view_waves)
 
         self.gen_tb.triggered.connect(lambda checked: self.main.generate_testbench())
+        self.synthesize.triggered.connect(lambda checked: self.main.synthesize_file())
+        self.show_schematic.triggered.connect(lambda checked: self.main.show_schematic_current_file())
         self.toggle_theme.triggered.connect(self.main.toggle_theme)
 

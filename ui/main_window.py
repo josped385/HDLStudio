@@ -89,6 +89,8 @@ class MainWindow(QMainWindow):
 
         tools_menu = menu.addMenu("Tools")
         tools_menu.addAction(self.ide_actions.gen_tb)
+        tools_menu.addAction(self.ide_actions.synthesize)
+        tools_menu.addAction(self.ide_actions.show_schematic)
 
         view_menu = menu.addMenu("View")
         view_menu.addAction(self.ide_actions.toggle_terminal)
@@ -166,6 +168,7 @@ class MainWindow(QMainWindow):
         explorer.run_requested.connect(self.run_file)
         explorer.wave_requested.connect(self.open_wave_file)
         explorer.gen_tb_requested.connect(self.generate_testbench)
+        explorer.synthesize_requested.connect(self.synthesize_file)
 
     # ---------------- CONNECTIONS ----------------
 
@@ -688,6 +691,80 @@ class MainWindow(QMainWindow):
             self.status.showMessage(f"Generated {dst_file}")
         except Exception as e:
             self.status.showMessage(f"Testbench generation failed: {e}")
+
+    def synthesize_file(self, path=None):
+        if path is None:
+            path, _ = QFileDialog.getOpenFileName(
+                self, "Select HDL file to synthesize",
+                "",
+                "HDL Files (*.v *.sv *.vhd *.vhdl);;All Files (*)"
+            )
+            if not path:
+                return
+
+        if not os.path.isfile(path):
+            self.status.showMessage("No HDL file selected")
+            return
+
+        if not self.build_system.yosys_available():
+            self.status.showMessage("yowasp-yosys not installed — run: pip install yowasp-yosys")
+            return
+
+        out_path, _ = QFileDialog.getSaveFileName(
+            self, "Save synthesis output",
+            os.path.splitext(os.path.basename(path))[0] + ".blif",
+            "BLIF (*.blif);;Verilog (*.v);;EDIF (*.edif);;JSON (*.json);;All Files (*)"
+        )
+
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header(f"SYNTHESIS: {os.path.basename(path)}")
+
+        write = self.bottom_panel.write_raw
+
+        self.status.showMessage("Synthesizing...")
+        try:
+            ok = self.build_system.synthesize(write, path, output_path=out_path)
+            if ok:
+                self.bottom_panel.write_ok("Synthesis complete")
+                self.status.showMessage("Synthesis complete")
+                if out_path and os.path.isfile(out_path):
+                    self._show_schematic(out_path)
+            else:
+                self.bottom_panel.write_error("Synthesis failed")
+                self.status.showMessage("Synthesis failed")
+        except Exception as e:
+            self.bottom_panel.write_error(f"Synthesis error: {e}")
+            self.status.showMessage(f"Synthesis error: {e}")
+
+    def _show_schematic(self, blif_path):
+        from core.schematic_viewer import show_schematic
+        try:
+            dlg = show_schematic(blif_path, self)
+            if dlg:
+                dlg.exec()
+            else:
+                self.status.showMessage("Could not generate schematic")
+        except Exception as e:
+            self.status.showMessage(f"Schematic error: {e}")
+
+    def show_schematic_current_file(self):
+        tab = self.editor_tabs.current_tab()
+        if not tab or not tab.path:
+            self.status.showMessage("No file open")
+            return
+        if not self.build_system.yosys_available():
+            self.status.showMessage("yowasp-yosys not installed — run: pip install yowasp-yosys")
+            return
+        from core.schematic_viewer import show_schematic_from_hdl
+        try:
+            dlg = show_schematic_from_hdl(tab.path, self)
+            if dlg:
+                dlg.exec()
+            else:
+                self.status.showMessage("Could not generate schematic")
+        except Exception as e:
+            self.status.showMessage(f"Schematic error: {e}")
 
     def toggle_explorer(self):
 
