@@ -14,8 +14,6 @@ from themes.theme_manager import ThemeManager
 class EditorTabs(QWidget):
 
     currentChanged = pyqtSignal(int)
-    navigate_to_definition = pyqtSignal(str, int)
-    navigate_to_module_name = pyqtSignal(str)
 
     def __init__(self, hover_db=None):
         super().__init__()
@@ -161,8 +159,6 @@ class EditorTabs(QWidget):
         tab = EditorTab(path)
         tab.load_file()
         tab.editor.set_hover_database(self._hover_db)
-        tab.editor.navigate_to_definition.connect(self.navigate_to_definition.emit)
-        tab.editor.navigate_to_module_name.connect(self.navigate_to_module_name.emit)
 
         tab.modified_changed.connect(
             lambda modified, t=tab: self._on_tab_modified(t, modified)
@@ -198,8 +194,6 @@ class EditorTabs(QWidget):
 
         tab = EditorTab(None)
         tab.editor.set_hover_database(self._hover_db)
-        tab.editor.navigate_to_definition.connect(self.navigate_to_definition.emit)
-        tab.editor.navigate_to_module_name.connect(self.navigate_to_module_name.emit)
 
         tab.modified_changed.connect(
             lambda modified, t=tab: self._on_tab_modified(t, modified)

@@ -288,8 +288,6 @@ class _TooltipPopup(QFrame):
 class CodeEditor(QsciScintilla):
 
     cursor_position_changed = pyqtSignal(int, int)
-    navigate_to_definition = pyqtSignal(str, int)  # filepath, lineno
-    navigate_to_module_name = pyqtSignal(str)  # module name (fallback)
 
     def __init__(self):
         super().__init__()
@@ -452,19 +450,6 @@ class CodeEditor(QsciScintilla):
             self._hide_popup()
 
     def mousePressEvent(self, event):
-        if (event.button() == Qt.MouseButton.LeftButton
-                and (event.modifiers() & Qt.KeyboardModifier.ControlModifier)):
-            pos = event.position().toPoint()
-            word = self._word_at_viewport(pos.x(), pos.y())
-            if word:
-                if self._hover_db:
-                    result = self._hover_db.find_definition(word)
-                    if result:
-                        filepath, lineno = result
-                        self.navigate_to_definition.emit(filepath, lineno)
-                        return
-                self.navigate_to_module_name.emit(word)
-                return
         super().mousePressEvent(event)
 
     def leaveEvent(self, event):

@@ -8,7 +8,7 @@ module tb_and_gate;
 
 reg a;
 
-re b;
+reg b;
 
 wire y;
 
