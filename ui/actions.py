@@ -48,7 +48,7 @@ class IDEActions:
         self.gen_tb = QAction("Generate Testbench", main_window)
         self.gen_tb.setShortcut(QKeySequence("Ctrl+Shift+G"))
 
-        self.synthesize = QAction(QIcon("assets/icons/compile.svg"), "Synthesize", main_window)
+        self.synthesize = QAction(QIcon("assets/icons/synthesize.svg"), "Synthesize", main_window)
         self.synthesize.setShortcut(QKeySequence("Ctrl+Shift+S"))
 
         self.show_schematic = QAction("Show Schematic", main_window)

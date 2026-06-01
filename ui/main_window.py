@@ -45,6 +45,7 @@ class MainWindow(QMainWindow):
         self.build_system = BuildSystem(self.project)
         self.wave_viewer = WaveViewer()
         self.hover_db = HoverDatabase()
+        self._last_synthesis_blif = None
 
         self._setup_ui()
         self._warn_if_no_iverilog()
@@ -169,6 +170,7 @@ class MainWindow(QMainWindow):
         explorer.wave_requested.connect(self.open_wave_file)
         explorer.gen_tb_requested.connect(self.generate_testbench)
         explorer.synthesize_requested.connect(self.synthesize_file)
+        explorer.show_schematic_requested.connect(self._on_show_schematic_from_explorer)
 
     # ---------------- CONNECTIONS ----------------
 
@@ -729,7 +731,8 @@ class MainWindow(QMainWindow):
                 self.bottom_panel.write_ok("Synthesis complete")
                 self.status.showMessage("Synthesis complete")
                 if out_path and os.path.isfile(out_path):
-                    self._show_schematic(out_path)
+                    self._last_synthesis_blif = out_path
+                    self.bottom_panel.write_raw("Use Show Schematic (Ctrl+Shift+D) to view the gate-level schematic.\n")
             else:
                 self.bottom_panel.write_error("Synthesis failed")
                 self.status.showMessage("Synthesis failed")
@@ -748,19 +751,60 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.status.showMessage(f"Schematic error: {e}")
 
-    def show_schematic_current_file(self):
-        tab = self.editor_tabs.current_tab()
-        if not tab or not tab.path:
-            self.status.showMessage("No file open")
-            return
+    def _on_show_schematic_from_explorer(self, path):
         if not self.build_system.yosys_available():
             self.status.showMessage("yowasp-yosys not installed — run: pip install yowasp-yosys")
             return
         from core.schematic_viewer import show_schematic_from_hdl
         try:
-            dlg = show_schematic_from_hdl(tab.path, self)
+            dlg = show_schematic_from_hdl(path, self)
             if dlg:
                 dlg.exec()
+                self.status.showMessage(f"Schematic: {os.path.basename(path)}")
+            else:
+                self.status.showMessage("Could not generate schematic")
+        except Exception as e:
+            self.status.showMessage(f"Schematic error: {e}")
+
+    def show_schematic_current_file(self):
+        if not self.build_system.yosys_available():
+            self.status.showMessage("yowasp-yosys not installed — run: pip install yowasp-yosys")
+            return
+
+        from core.schematic_viewer import show_schematic_from_hdl, show_schematic
+
+        # Priority: last synthesis BLIF → current editor file → file dialog
+        target = None
+        label = None
+
+        if self._last_synthesis_blif and os.path.isfile(self._last_synthesis_blif):
+            target = self._last_synthesis_blif
+            label = "last synthesis"
+        else:
+            tab = self.editor_tabs.current_tab()
+            if tab and tab.path:
+                target = tab.path
+                label = os.path.basename(tab.path)
+
+        if not target:
+            target, _ = QFileDialog.getOpenFileName(
+                self, "Select HDL or BLIF file for schematic",
+                "",
+                "HDL/BLIF Files (*.v *.sv *.vhd *.vhdl *.blif);;All Files (*)"
+            )
+            if not target:
+                return
+            label = os.path.basename(target)
+
+        is_blif = target.lower().endswith(".blif")
+        try:
+            if is_blif:
+                dlg = show_schematic(target, self)
+            else:
+                dlg = show_schematic_from_hdl(target, self)
+            if dlg:
+                dlg.exec()
+                self.status.showMessage(f"Schematic: {label}")
             else:
                 self.status.showMessage("Could not generate schematic")
         except Exception as e:
