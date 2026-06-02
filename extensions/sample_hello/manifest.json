@@ -1,0 +1,9 @@
+{
+  "name": "Hello World Sample",
+  "id": "sample_hello",
+  "version": "1.0.0",
+  "description": "Sample extension that adds a hello-world button and menu item",
+  "author": "HDLStudio",
+  "main": "main.py",
+  "api_version": "1.0"
+}

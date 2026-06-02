@@ -16,6 +16,8 @@ class FileExplorer(QTreeView):
     show_schematic_requested = pyqtSignal(str)
     pnr_requested = pyqtSignal(str)
 
+    _extension_actions = []
+
     def __init__(self, root_path="."):
         super().__init__()
 
@@ -81,7 +83,27 @@ class FileExplorer(QTreeView):
         elif ext in (".vcd", ".fst", ".lxt", ".lxt2", ".ghw"):
             wave_action = menu.addAction(self._icon("wave"), "View Waves")
 
+        # Extension context actions
+        ext_actions_added = False
+        for entry in self._extension_actions:
+            pat = entry.get("file_pattern", "*")
+            import fnmatch
+            if fnmatch.fnmatch(os.path.basename(path), pat):
+                if not ext_actions_added:
+                    menu.addSeparator()
+                    ext_actions_added = True
+                act = menu.addAction(entry.get("text", entry["action_id"]))
+                act._ext_action_id = entry["action_id"]
+
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
+
+        # Check extension actions first
+        if hasattr(chosen, '_ext_action_id'):
+            aid = chosen._ext_action_id
+            for entry in self._extension_actions:
+                if entry["action_id"] == aid and entry.get("action"):
+                    entry["action"].trigger()
+                    return
 
         if chosen == open_action:
             self.file_open_requested.emit(path)

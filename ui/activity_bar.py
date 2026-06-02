@@ -86,6 +86,24 @@ class ActivityBar(QToolBar):
         self.git_btn.setCheckable(True)
         self.git_btn.triggered.connect(self._on_git)
 
+        # Extension actions are inserted here at runtime
+        self._extension_actions = {}  # action_id -> QAction
+        self._extension_actions_order = []
+
+    def _add_extension_action(self, action_id, action):
+        self._extension_actions[action_id] = action
+        self._extension_actions_order.append(action_id)
+        action.setCheckable(True)
+        # Insert before the spacer widget (first item added by _populate_end)
+        self.insertAction(self.settings_btn, action)
+
+    def _remove_extension_action(self, action_id):
+        action = self._extension_actions.pop(action_id, None)
+        if action_id in self._extension_actions_order:
+            self._extension_actions_order.remove(action_id)
+        if action:
+            self.removeAction(action)
+
     def _uncheck_all(self):
         self.explorer_btn.setChecked(False)
         self.hierarchy_btn.setChecked(False)

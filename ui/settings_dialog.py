@@ -1,9 +1,11 @@
+import os
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSpinBox, QCheckBox, QPushButton, QSlider, QDialogButtonBox,
-    QGroupBox, QFormLayout, QTabWidget, QWidget,
+    QGroupBox, QFormLayout, QTabWidget, QWidget, QTableWidget,
+    QTableWidgetItem, QHeaderView,
 )
 
 from themes.theme_manager import ThemeManager
@@ -118,6 +120,34 @@ class SettingsDialog(QDialog):
         lang_note.setWordWrap(True)
         general_layout.addRow(lang_note)
 
+        # ── Extensions tab ──
+        ext_tab = QWidget()
+        tabs.addTab(ext_tab, "Extensions")
+        ext_layout = QVBoxLayout(ext_tab)
+
+        self.ext_table = QTableWidget()
+        self.ext_table.setColumnCount(4)
+        self.ext_table.setHorizontalHeaderLabels(["", "ID", "Name", "Version"])
+        self.ext_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.ext_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.ext_table.setColumnWidth(0, 50)
+        self.ext_table.setColumnWidth(3, 80)
+        self.ext_table.verticalHeader().setVisible(False)
+        self.ext_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        ext_layout.addWidget(self.ext_table)
+
+        open_ext_dir_btn = QPushButton("Open Extensions Folder")
+        open_ext_dir_btn.clicked.connect(self._open_extensions_folder)
+        ext_layout.addWidget(open_ext_dir_btn)
+
+        info_label = QLabel(
+            "Extensions are loaded from the 'extensions/' folder next to main.py. "
+            "Drop a folder with a manifest.json and restart to load."
+        )
+        info_label.setStyleSheet("color: #888; font-size: 9pt; padding: 4px;")
+        info_label.setWordWrap(True)
+        ext_layout.addWidget(info_label)
+
         # ── Buttons ──
         btn_layout = QHBoxLayout()
         restore_btn = QPushButton("Restore Defaults")
@@ -152,6 +182,50 @@ class SettingsDialog(QDialog):
         idx = self.lang_combo.findData(s["language"])
         if idx >= 0:
             self.lang_combo.setCurrentIndex(idx)
+        self._load_extensions()
+
+    def _load_extensions(self):
+        main = self.window()
+        if not hasattr(main, "ext_manager"):
+            return
+        mgr = main.ext_manager
+        exts = mgr.list_extensions()
+        self.ext_table.setRowCount(len(exts))
+        for row, info in enumerate(exts):
+            disabled = info.get("disabled", False)
+            cb = QCheckBox()
+            cb.blockSignals(True)
+            cb.setChecked(not disabled)
+            cb.blockSignals(False)
+            cb.stateChanged.connect(
+                lambda st, eid=info["id"], m=mgr: self._toggle_ext(eid, st == 0)
+            )
+            cell = QWidget()
+            lay = QHBoxLayout(cell)
+            lay.setContentsMargins(4, 0, 0, 0)
+            lay.addWidget(cb)
+            lay.addStretch()
+            self.ext_table.setCellWidget(row, 0, cell)
+            self.ext_table.setItem(row, 1, QTableWidgetItem(info["id"]))
+            mf = info.get("manifest", {})
+            self.ext_table.setItem(row, 2, QTableWidgetItem(mf.get("name", "")))
+            self.ext_table.setItem(row, 3, QTableWidgetItem(mf.get("version", "")))
+            if disabled:
+                for col in range(4):
+                    item = self.ext_table.item(row, col)
+                    if item:
+                        item.setForeground(Qt.GlobalColor.gray)
+
+    def _toggle_ext(self, ext_id, disabled):
+        main = self.window()
+        if hasattr(main, "ext_manager"):
+            main.ext_manager.set_disabled(ext_id, disabled)
+
+    def _open_extensions_folder(self):
+        from extensions.manager import EXTENSIONS_DIR
+        os.makedirs(EXTENSIONS_DIR, exist_ok=True)
+        import subprocess
+        subprocess.Popen(["explorer", EXTENSIONS_DIR])
 
     def _apply(self):
         s = self._settings

@@ -24,6 +24,7 @@ from themes.theme_manager import ThemeManager
 from core.build_system import BuildSystem
 from core.wave_viewer import WaveViewer
 from core.hover_data import HoverDatabase
+from extensions.manager import ExtensionManager
 
 
 class MainWindow(QMainWindow):
@@ -48,9 +49,12 @@ class MainWindow(QMainWindow):
         self._last_synthesis_blif = None
         self._last_synthesis_json = None
 
+        self.ext_manager = ExtensionManager(self)
+
         self._setup_ui()
         self._warn_if_no_iverilog()
         self._refresh_icons()
+        self.ext_manager.discover_and_load_all()
 
         QApplication.instance().installEventFilter(self)
 
@@ -546,6 +550,7 @@ class MainWindow(QMainWindow):
             return
 
         if clicked == discard_btn:
+            self.ext_manager.unload_all()
             event.accept()
             return
 
@@ -554,7 +559,8 @@ class MainWindow(QMainWindow):
             for tab in dirty_tabs:
                 tab.save()
 
-            event.accept()
+        self.ext_manager.unload_all()
+        event.accept()
 
     # ---------------- BUILD SYSTEM ----------------
 

@@ -7,6 +7,7 @@ class IDEActions:
     def __init__(self, main_window):
 
         self.main = main_window
+        self._custom_actions = {}
 
         # ---------------- FILE ----------------
 

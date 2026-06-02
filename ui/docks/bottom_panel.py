@@ -27,6 +27,7 @@ class BottomPanel(QDockWidget):
         self._process = None
         self._history = []
         self._log_path = None
+        self._extension_tabs = {}
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -229,6 +230,21 @@ class BottomPanel(QDockWidget):
                 self.log_output.setPlainText(f.read())
         except Exception:
             pass
+
+    # ── Extension tabs ──────────────────────────────
+
+    def add_extension_tab(self, panel_id, title, widget):
+        self._extension_tabs[panel_id] = (title, widget)
+        self.tabs.addTab(widget, title)
+
+    def remove_extension_tab(self, panel_id):
+        entry = self._extension_tabs.pop(panel_id, None)
+        if entry:
+            _, widget = entry
+            idx = self.tabs.indexOf(widget)
+            if idx >= 0:
+                self.tabs.removeTab(idx)
+            widget.setParent(None)
 
     # ── theme ─────────────────────────────────────────
 
