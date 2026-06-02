@@ -31,6 +31,7 @@ dependencies = [
     { name = "pyqt6" },
     { name = "pyqt6-qscintilla" },
     { name = "pyqt6-sip" },
+    { name = "yowasp-nextpnr-ice40" },
     { name = "yowasp-yosys" },
 ]
 
@@ -39,6 +40,7 @@ requires-dist = [
     { name = "pyqt6", specifier = "==6.11.0" },
     { name = "pyqt6-qscintilla", specifier = "==2.14.1" },
     { name = "pyqt6-sip", specifier = ">=13.11.1" },
+    { name = "yowasp-nextpnr-ice40", specifier = "==0.10.0.75.post792.dev0" },
     { name = "yowasp-yosys", specifier = "==0.65.0.0.post1154" },
 ]
 
@@ -133,6 +135,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/63/49d8317706a108d9ed1d4166d0fc710796da1b20e591a98a96575dec367a/wasmtime-45.0.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:a0b6ca14b4628a5d1ffa91ccf2c0f2c58fa171f126ec085d564b09d5795395dd", size = 9712524, upload-time = "2026-05-26T17:57:33.839Z" },
     { url = "https://files.pythonhosted.org/packages/20/71/8e31ea472ceb934e7261ac59a786e82cd82b4d4dcb7c870d498aa9c3c21e/wasmtime-45.0.0-py3-none-win_amd64.whl", hash = "sha256:1736a70a48f713aaf1a878514d29cc6f554213b5431e04447813a3b9b4320381", size = 8019039, upload-time = "2026-05-26T17:57:36.04Z" },
     { url = "https://files.pythonhosted.org/packages/9c/d1/ac536e92ac95a02e137be5b6829f15b87d5eef93ace32e5ee8035155b839/wasmtime-45.0.0-py3-none-win_arm64.whl", hash = "sha256:ae9726590e6d90c6305b8b507c93468b145204d4390aa9a2e29e26babcae110e", size = 6845659, upload-time = "2026-05-26T17:57:37.696Z" },
+]
+
+[[package]]
+name = "yowasp-nextpnr-ice40"
+version = "0.10.0.75.post792.dev0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/77/e0bbf8d1c260e7a81f3de02db57f73b372380d296467b44849a3b83ac8cb/yowasp_nextpnr_ice40-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:d45639e9e08e4c836510217f8a76d4da0245e88c8b883babc3ea691c0680bfe8", size = 71784551, upload-time = "2026-05-27T13:20:14.324Z" },
 ]
 
 [[package]]

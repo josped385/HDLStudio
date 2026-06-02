@@ -14,6 +14,7 @@ class FileExplorer(QTreeView):
     gen_tb_requested = pyqtSignal(str)
     synthesize_requested = pyqtSignal(str)
     show_schematic_requested = pyqtSignal(str)
+    pnr_requested = pyqtSignal(str)
 
     def __init__(self, root_path="."):
         super().__init__()
@@ -72,6 +73,9 @@ class FileExplorer(QTreeView):
             gen_tb_action = menu.addAction("Generate Testbench")
             synth_action = menu.addAction(self._icon("synthesize"), "Synthesize")
             show_sch_action = menu.addAction(self._icon("synthesize"), "Show Schematic")
+            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
+        elif ext == ".json":
+            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
         elif ext == ".vvp":
             run_action = menu.addAction(self._icon("play"), "Run")
         elif ext in (".vcd", ".fst", ".lxt", ".lxt2", ".ghw"):
@@ -89,7 +93,7 @@ class FileExplorer(QTreeView):
             self._cut_path(path)
         elif chosen == delete_action:
             self._delete_path(path)
-        elif chosen in menu.actions() and chosen.text() in ("Compile", "Run", "View Waves", "Generate Testbench", "Synthesize", "Show Schematic"):
+        elif chosen in menu.actions() and chosen.text() in ("Compile", "Run", "View Waves", "Generate Testbench", "Synthesize", "Show Schematic", "Place & Route"):
             if chosen.text() == "Compile":
                 self.compile_requested.emit(path)
             elif chosen.text() == "Run":
@@ -102,6 +106,8 @@ class FileExplorer(QTreeView):
                 self.synthesize_requested.emit(path)
             elif chosen.text() == "Show Schematic":
                 self.show_schematic_requested.emit(path)
+            elif chosen.text() == "Place & Route":
+                self.pnr_requested.emit(path)
 
     def _show_in_explorer(self, path):
         folder = os.path.dirname(path)

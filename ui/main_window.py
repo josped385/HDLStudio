@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
         self.wave_viewer = WaveViewer()
         self.hover_db = HoverDatabase()
         self._last_synthesis_blif = None
+        self._last_synthesis_json = None
 
         self._setup_ui()
         self._warn_if_no_iverilog()
@@ -92,6 +93,7 @@ class MainWindow(QMainWindow):
         tools_menu.addAction(self.ide_actions.gen_tb)
         tools_menu.addAction(self.ide_actions.synthesize)
         tools_menu.addAction(self.ide_actions.show_schematic)
+        tools_menu.addAction(self.ide_actions.place_and_route)
 
         view_menu = menu.addMenu("View")
         view_menu.addAction(self.ide_actions.toggle_terminal)
@@ -171,6 +173,7 @@ class MainWindow(QMainWindow):
         explorer.gen_tb_requested.connect(self.generate_testbench)
         explorer.synthesize_requested.connect(self.synthesize_file)
         explorer.show_schematic_requested.connect(self._on_show_schematic_from_explorer)
+        explorer.pnr_requested.connect(self._on_pnr_from_explorer)
 
     # ---------------- CONNECTIONS ----------------
 
@@ -731,8 +734,13 @@ class MainWindow(QMainWindow):
                 self.bottom_panel.write_ok("Synthesis complete")
                 self.status.showMessage("Synthesis complete")
                 if out_path and os.path.isfile(out_path):
-                    self._last_synthesis_blif = out_path
-                    self.bottom_panel.write_raw("Use Show Schematic (Ctrl+Shift+D) to view the gate-level schematic.\n")
+                    out_lower = out_path.lower()
+                    if out_lower.endswith(".json"):
+                        self._last_synthesis_json = out_path
+                        self.bottom_panel.write_raw("Use Place & Route (Ctrl+Shift+P) to run PnR on this design.\n")
+                    else:
+                        self._last_synthesis_blif = out_path
+                        self.bottom_panel.write_raw("Use Show Schematic (Ctrl+Shift+D) to view the gate-level schematic.\n")
             else:
                 self.bottom_panel.write_error("Synthesis failed")
                 self.status.showMessage("Synthesis failed")
@@ -809,6 +817,137 @@ class MainWindow(QMainWindow):
                 self.status.showMessage("Could not generate schematic")
         except Exception as e:
             self.status.showMessage(f"Schematic error: {e}")
+
+    def place_and_route_file(self, path=None):
+        if path is None:
+            # Use last synthesis JSON if available
+            if self._last_synthesis_json and os.path.isfile(self._last_synthesis_json):
+                path = self._last_synthesis_json
+            else:
+                path, _ = QFileDialog.getOpenFileName(
+                    self, "Select synthesized JSON for PnR",
+                    "",
+                    "JSON Files (*.json);;All Files (*)"
+                )
+                if not path:
+                    return
+
+        if not os.path.isfile(path):
+            self.status.showMessage("No JSON file selected")
+            return
+
+        from core.pnr_system import run_pnr
+
+        default_asc = os.path.splitext(os.path.basename(path))[0] + ".asc"
+        asc_path, _ = QFileDialog.getSaveFileName(
+            self, "Save PnR output",
+            default_asc,
+            "ASC (*.asc);;All Files (*)"
+        )
+
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header(f"PLACE & ROUTE: {os.path.basename(path)}")
+
+        write = self.bottom_panel.write_raw
+        self.status.showMessage("Running Place & Route...")
+
+        try:
+            asc_path_result, report_info = run_pnr(
+                write, path, asc_path=asc_path or None,
+                device="hx1k", package=None, frequency=12
+            )
+            if asc_path_result:
+                self.bottom_panel.write_ok("Place & Route complete")
+                self.status.showMessage("Place & Route complete")
+                if report_info:
+                    self._show_pnr_report(report_info)
+            else:
+                self.bottom_panel.write_error("Place & Route failed")
+                self.status.showMessage("Place & Route failed")
+        except Exception as e:
+            self.bottom_panel.write_error(f"PnR error: {e}")
+            self.status.showMessage(f"PnR error: {e}")
+
+    def _show_pnr_report(self, report_info):
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QTableWidget,
+                                     QTableWidgetItem, QHeaderView,
+                                     QDialogButtonBox, QLabel)
+        from PyQt6.QtGui import QFont
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("PnR Report")
+        dlg.resize(520, 400)
+
+        layout = QVBoxLayout(dlg)
+
+        if not report_info:
+            layout.addWidget(QLabel("No report data available."))
+            btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+            btn_box.accepted.connect(dlg.accept)
+            layout.addWidget(btn_box)
+            dlg.exec()
+            return
+
+        table = QTableWidget()
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels(["Metric", "Value"])
+        table.horizontalHeader().setStretchLastSection(True)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setAlternatingRowColors(True)
+        table.setFont(QFont("Consolas", 10))
+
+        rows = []
+        for key, label in [
+            ("device", "Device"),
+            ("worst_slack", "Worst Slack"),
+            ("best_slack", "Best Slack"),
+            ("fmax", "Fmax (MHz)"),
+            ("total_negative_slack", "TNS"),
+            ("logic_delay_ns", "Logic delay (ns)"),
+            ("routing_delay_ns", "Routing delay (ns)"),
+            ("total_delay_ns", "Total delay (ns)"),
+            ("luts_used", "LCs used"),
+            ("luts_total", "LCs total"),
+            ("bram_used", "BRAM used"),
+            ("bram_total", "BRAM total"),
+            ("io_used", "IO used"),
+            ("io_total", "IO total"),
+            ("pll_used", "PLL used"),
+            ("pll_total", "PLL total"),
+            ("global_buffers_used", "Global buffers used"),
+            ("global_buffers_total", "Global buffers total"),
+            ("warmboot_used", "Warmboot used"),
+            ("warmboot_total", "Warmboot total"),
+            ("luts", "LUTs"),
+            ("ffs", "FFs"),
+            ("carry", "Carry"),
+            ("bram", "BRAM blocks"),
+            ("io", "IO pins"),
+            ("pll", "PLLs"),
+            ("warmboot", "Warmboot"),
+            ("note", "Note"),
+        ]:
+            v = report_info.get(key)
+            if v is not None:
+                rows.append((label, str(v)))
+
+        table.setRowCount(len(rows))
+        for i, (label, val) in enumerate(rows):
+            table.setItem(i, 0, QTableWidgetItem(label))
+            table.setItem(i, 1, QTableWidgetItem(val))
+
+        table.resizeColumnsToContents()
+        layout.addWidget(table)
+
+        btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        btn_box.accepted.connect(dlg.accept)
+        layout.addWidget(btn_box)
+
+        dlg.exec()
+
+    def _on_pnr_from_explorer(self, path):
+        self.place_and_route_file(path)
 
     def toggle_explorer(self):
 

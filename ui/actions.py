@@ -54,6 +54,9 @@ class IDEActions:
         self.show_schematic = QAction("Show Schematic", main_window)
         self.show_schematic.setShortcut(QKeySequence("Ctrl+Shift+D"))
 
+        self.place_and_route = QAction(QIcon("assets/icons/pnr.svg"), "Place & Route", main_window)
+        self.place_and_route.setShortcut(QKeySequence("Ctrl+Shift+P"))
+
         # ---------------- THEME ----------------
         self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
         self.toggle_theme.setShortcut(QKeySequence("Ctrl+Shift+T"))
@@ -82,5 +85,6 @@ class IDEActions:
         self.gen_tb.triggered.connect(lambda checked: self.main.generate_testbench())
         self.synthesize.triggered.connect(lambda checked: self.main.synthesize_file())
         self.show_schematic.triggered.connect(lambda checked: self.main.show_schematic_current_file())
+        self.place_and_route.triggered.connect(lambda checked: self.main.place_and_route_file())
         self.toggle_theme.triggered.connect(self.main.toggle_theme)
 

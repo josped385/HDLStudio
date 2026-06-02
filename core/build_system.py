@@ -236,6 +236,16 @@ class BuildSystem:
         except ImportError:
             return False
 
+    def _synth_script_for(self, read_cmd, output_ext):
+        """Return the yosys synth script based on the output file extension."""
+        scripts = {
+            ".blif": f"{read_cmd} {{input}}; synth; write_blif {{output}}",
+            ".json": f"{read_cmd} {{input}}; synth_ice40 -json {{output}}",
+            ".v":    f"{read_cmd} {{input}}; synth; write_verilog {{output}}",
+            ".edif": f"{read_cmd} {{input}}; synth; write_edif {{output}}",
+        }
+        return scripts.get(output_ext, f"{read_cmd} {{input}}; synth; write_blif {{output}}")
+
     def synthesize(self, terminal_callback, filepath, output_path=None, synth_script=None):
         if not self.yosys_available():
             terminal_callback("yowasp-yosys not installed. Run: pip install yowasp-yosys\n")
@@ -265,8 +275,10 @@ class BuildSystem:
             out_dir = os.path.dirname(output_path)
             os.makedirs(out_dir, exist_ok=True)
 
+        out_ext = os.path.splitext(output_path)[1].lower() if output_path else ".blif"
+
         if synth_script is None:
-            synth_script = f"{read_cmd} {{input}}; synth; write_blif {{output}}"
+            synth_script = self._synth_script_for(read_cmd, out_ext)
 
         work_dir = tempfile.mkdtemp(prefix="synth_")
         try:
@@ -274,7 +286,7 @@ class BuildSystem:
             orig_cwd = os.getcwd()
             os.chdir(work_dir)
 
-            out_name = f"{base}.blif"
+            out_name = f"{base}{out_ext}"
             script = synth_script.replace("{input}", src_name).replace("{output}", out_name)
 
             terminal_callback(f"Running yosys on {src_name}...\n")
