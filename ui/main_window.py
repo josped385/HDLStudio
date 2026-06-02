@@ -979,6 +979,7 @@ class MainWindow(QMainWindow):
             "templates": self.activity_bar.templates_btn,
             "git": self.activity_bar.git_btn,
             "settings": self.activity_bar.settings_btn,
+            "help": self.activity_bar.about_btn,
         }
         for name, action in icon_map.items():
             action.setIcon(QIcon(TM.icon(name)))
@@ -1073,10 +1074,41 @@ class MainWindow(QMainWindow):
 
     def _show_about(self):
 
-        QMessageBox.about(
-            self,
-            "About HDLStudio",
-            "HDLStudio v0.1.0\n\n"
-            "A lightweight IDE for HDL development.\n"
-            "Supports Verilog, SystemVerilog, and VHDL."
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle("About HDLStudio")
+        dlg.resize(460, 380)
+        layout = QVBoxLayout(dlg)
+
+        text = (
+            "<h2>HDLStudio</h2>"
+            "<p><b>Version:</b> 0.1.0</p>"
+            "<p><b>Author:</b> José Pedro Granado Olmo</p>"
+            "<p><b>License:</b> GPL v3</p>"
+            "<hr>"
+            "<p>A modern IDE for digital hardware design.</p>"
+            "<ul>"
+            "<li>Verilog, SystemVerilog &amp; VHDL editing with syntax highlighting</li>"
+            "<li>Icarus Verilog compilation &amp; simulation</li>"
+            "<li>GTKWave waveform viewer integration</li>"
+            "<li>Yosys HDL synthesis</li>"
+            "<li>nextpnr-ice40 place &amp; route</li>"
+            "<li>Graphviz schematic viewer</li>"
+            "<li>Automatic testbench generation</li>"
+            "<li>Extensible via plugins</li>"
+            "</ul>"
+            "<hr>"
+            "<p style='font-size:9pt; color:#888;'>"
+            "Powered by PyQt6, QScintilla, Yosys, nextpnr, "
+            "Icarus Verilog, GTKWave &amp; Graphviz.</p>"
         )
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(label)
+
+        btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        btn_box.accepted.connect(dlg.accept)
+        layout.addWidget(btn_box)
+
+        dlg.exec()

@@ -147,7 +147,16 @@ class ActivityBar(QToolBar):
         )
         self.settings_btn.triggered.connect(self._on_settings)
 
+        self.about_btn = self.addAction(
+            QIcon("assets/icons/help.svg"),
+            "About"
+        )
+        self.about_btn.triggered.connect(self._on_about)
+
     def _on_settings(self):
         from ui.settings_dialog import SettingsDialog
         dlg = SettingsDialog(self.main)
         dlg.exec()
+
+    def _on_about(self):
+        self.main._show_about()

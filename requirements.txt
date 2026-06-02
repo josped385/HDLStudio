@@ -1,0 +1,13 @@
+# HDLStudio - Python dependencies
+# Install with: pip install -r requirements.txt
+#
+# External tools (install separately):
+#   Icarus Verilog (iverilog)  -- https://github.com/steveicarus/iverilog
+#   GTKWave                    -- https://gtkwave.sourceforge.net
+#   Graphviz                   -- https://graphviz.org/download
+
+pyqt6>=6.11.0
+pyqt6-qscintilla>=2.14.1
+pyqt6-sip>=13.11.1
+yowasp-yosys>=0.65.0.0.post1154
+yowasp-nextpnr-ice40>=0.10.0.75.post792.dev0
