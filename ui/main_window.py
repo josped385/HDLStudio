@@ -104,6 +104,11 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
         view_menu.addAction(self.ide_actions.toggle_theme)
 
+        tools_menu.addSeparator()
+        settings_action = tools_menu.addAction("Settings...")
+        settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        settings_action.triggered.connect(self._show_settings)
+
         help_menu = menu.addMenu("Help")
         about_action = help_menu.addAction("About")
         about_action.triggered.connect(self._show_about)
@@ -967,6 +972,7 @@ class MainWindow(QMainWindow):
             "connections": self.activity_bar.connections_btn,
             "templates": self.activity_bar.templates_btn,
             "git": self.activity_bar.git_btn,
+            "settings": self.activity_bar.settings_btn,
         }
         for name, action in icon_map.items():
             action.setIcon(QIcon(TM.icon(name)))
@@ -988,6 +994,11 @@ class MainWindow(QMainWindow):
 
         for i in range(self.editor_tabs.count()):
             self.editor_tabs.setTabIcon(i, QIcon(TM.icon("file")))
+
+    def _show_settings(self):
+        from ui.settings_dialog import SettingsDialog
+        dlg = SettingsDialog(self)
+        dlg.exec()
 
     def toggle_theme(self):
 
@@ -1013,6 +1024,35 @@ class MainWindow(QMainWindow):
         self._refresh_icons()
 
         self.status.showMessage(f"Switched to {new_theme} theme")
+
+    def apply_settings(self, settings):
+        theme = settings.get("theme", ThemeManager.current_theme)
+        if theme != ThemeManager.current_theme:
+            ThemeManager.set_theme(theme)
+            colors = ThemeManager.colors()
+            self.setStyleSheet(build_stylesheet())
+            self.activity_bar.apply_theme(colors)
+            self.toolbar.apply_theme(colors)
+            self.bottom_panel.apply_theme(colors)
+            self.signal_dock.apply_theme(colors)
+            self.template_dock.apply_theme(colors)
+            self.hierarchy_dock.apply_theme(colors)
+            self.git_dock.apply_theme(colors)
+            self.editor_tabs._find_bar.apply_theme(colors)
+            self.editor_tabs._style_tab_buttons()
+            for tab in self.editor_tabs.tabs.values():
+                tab.editor.apply_theme_from_colors(colors)
+            self._refresh_icons()
+
+        family = settings.get("font_family", "Consolas")
+        size = settings.get("font_size", 10)
+        font = QFont(family, size)
+        for tab in self.editor_tabs.tabs.values():
+            tab.editor.setEditorFont(font)
+            tab.editor.set_editor_tab_width(settings.get("tab_width", 4))
+            tab.editor.set_editor_word_wrap(settings.get("word_wrap", False))
+
+        self.status.showMessage("Settings applied", 3000)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyPress:

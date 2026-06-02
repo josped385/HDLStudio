@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QToolBar
+from PyQt6.QtWidgets import QToolBar, QWidget, QSizePolicy
 
 
 class ActivityBar(QToolBar):
@@ -18,6 +18,8 @@ class ActivityBar(QToolBar):
 
         from themes.theme_manager import ThemeManager
         self.apply_theme(ThemeManager.colors())
+
+        self._populate_end()
         # Start with explorer checked
         self.explorer_btn.setChecked(True)
 
@@ -115,3 +117,19 @@ class ActivityBar(QToolBar):
         self._uncheck_all()
         self.git_btn.setChecked(True)
         self.main._show_activity_panel("git")
+
+    def _populate_end(self):
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.addWidget(spacer)
+
+        self.settings_btn = self.addAction(
+            QIcon("assets/icons/settings.svg"),
+            "Settings"
+        )
+        self.settings_btn.triggered.connect(self._on_settings)
+
+    def _on_settings(self):
+        from ui.settings_dialog import SettingsDialog
+        dlg = SettingsDialog(self.main)
+        dlg.exec()

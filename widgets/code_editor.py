@@ -502,7 +502,7 @@ class CodeEditor(QsciScintilla):
     def _setup_editor(self):
 
         self.setUtf8(True)
-        self.setFont(QFont("Consolas", 10))
+        self.setEditorFont(QFont("Consolas", 10))
         self.setMarginsFont(QFont("Consolas", 10))
 
         self.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
@@ -518,6 +518,20 @@ class CodeEditor(QsciScintilla):
         self.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
 
         self._force_apply_theme()
+
+    def setEditorFont(self, font):
+        self.setFont(font)
+        self.setMarginsFont(font)
+
+    def set_editor_tab_width(self, width):
+        self.setTabWidth(width)
+        self.setIndentationWidth(width)
+
+    def set_editor_word_wrap(self, enabled):
+        if enabled:
+            self.setWrapMode(QsciScintilla.WrapMode.WrapWord)
+        else:
+            self.setWrapMode(QsciScintilla.WrapMode.WrapNone)
 
     def set_error_lines(self, line_numbers):
         pass
