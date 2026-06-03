@@ -47,10 +47,15 @@ class BuildSystem:
         direct = shutil.which("verilator")
         if direct:
             return [direct]
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         try:
             result = subprocess.run(
                 ["wsl", "verilator", "--version"],
-                capture_output=True, text=True, timeout=15
+                capture_output=True, text=True, timeout=15,
+                startupinfo=startupinfo
             )
             if result.returncode == 0:
                 return ["wsl", "verilator"]

@@ -64,3 +64,6 @@ examples/*/*.asc
 # Temporary
 tmp/
 temp/
+# Inno Setup
+installer/
+HDLStudio.spec
