@@ -1,5 +1,7 @@
+import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
+from themes.theme_manager import ThemeManager
 
 
 class IDEActions:
@@ -11,51 +13,51 @@ class IDEActions:
 
         # ---------------- FILE ----------------
 
-        self.new_file = QAction(QIcon("assets/icons/new.svg"), "New File", main_window)
+        self.new_file = QAction(QIcon(ThemeManager.icon("new")), "New File", main_window)
         self.new_file.setShortcut(QKeySequence("Ctrl+N"))
 
-        self.open_file = QAction(QIcon("assets/icons/open.svg"), "Open File", main_window)
+        self.open_file = QAction(QIcon(ThemeManager.icon("open")), "Open File", main_window)
         self.open_file.setShortcut(QKeySequence("Ctrl+O"))
 
-        self.open_project = QAction(QIcon("assets/icons/open_folder.svg"), "Open Project", main_window)
+        self.open_project = QAction(QIcon(ThemeManager.icon("open_folder")), "Open Project", main_window)
         self.open_project.setShortcut(QKeySequence("Ctrl+Shift+O"))
 
-        self.save = QAction(QIcon("assets/icons/save.svg"), "Save", main_window)
+        self.save = QAction(QIcon(ThemeManager.icon("save")), "Save", main_window)
         self.save.setShortcut(QKeySequence("Ctrl+S"))
 
-        self.save_as = QAction(QIcon("assets/icons/save_as.svg"), "Save As", main_window)
+        self.save_as = QAction(QIcon(ThemeManager.icon("save_as")), "Save As", main_window)
         self.save_as.setShortcut(QKeySequence("Ctrl+Shift+S"))
 
         # ---------------- BUILD ----------------
 
-        self.compile = QAction(QIcon("assets/icons/compile.svg"), "Compile", main_window)
+        self.compile = QAction(QIcon(ThemeManager.icon("compile")), "Compile", main_window)
         self.compile.setShortcut(QKeySequence("F5"))
 
-        self.run = QAction(QIcon("assets/icons/play.svg"), "Run", main_window)
+        self.run = QAction(QIcon(ThemeManager.icon("play")), "Run", main_window)
         self.run.setShortcut(QKeySequence("F6"))
 
         # ---------------- VIEW ----------------
 
-        self.toggle_terminal = QAction(QIcon("assets/icons/terminal.svg"), "Toggle Terminal", main_window)
+        self.toggle_terminal = QAction(QIcon(ThemeManager.icon("terminal")), "Toggle Terminal", main_window)
         self.toggle_terminal.setShortcut(QKeySequence("Ctrl+`"))
 
         self.toggle_explorer = QAction("Toggle Explorer", main_window)
         self.toggle_explorer.setShortcut(QKeySequence("Ctrl+B"))
 
-        self.view_waves = QAction(QIcon("assets/icons/wave.svg"), "View Waves", main_window)
+        self.view_waves = QAction(QIcon(ThemeManager.icon("wave")), "View Waves", main_window)
         self.view_waves.setShortcut(QKeySequence("F7"))
 
         # ---------------- TOOLS ----------------
         self.gen_tb = QAction("Generate Testbench", main_window)
         self.gen_tb.setShortcut(QKeySequence("Ctrl+Shift+G"))
 
-        self.synthesize = QAction(QIcon("assets/icons/synthesize.svg"), "Synthesize", main_window)
+        self.synthesize = QAction(QIcon(ThemeManager.icon("synthesize")), "Synthesize", main_window)
         self.synthesize.setShortcut(QKeySequence("Ctrl+Shift+S"))
 
         self.show_schematic = QAction("Show Schematic", main_window)
         self.show_schematic.setShortcut(QKeySequence("Ctrl+Shift+D"))
 
-        self.place_and_route = QAction(QIcon("assets/icons/pnr.svg"), "Place & Route", main_window)
+        self.place_and_route = QAction(QIcon(ThemeManager.icon("pnr")), "Place && Route", main_window)
         self.place_and_route.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
         # ---------------- THEME ----------------

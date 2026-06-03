@@ -1025,6 +1025,8 @@ class MainWindow(QMainWindow):
             "save_as": self.ide_actions.save_as,
             "compile": self.ide_actions.compile,
             "play": self.ide_actions.run,
+            "synthesize": self.ide_actions.synthesize,
+            "pnr": self.ide_actions.place_and_route,
             "wave": self.ide_actions.view_waves,
             "darklight": self.ide_actions.toggle_theme,
             "terminal": self.ide_actions.toggle_terminal,

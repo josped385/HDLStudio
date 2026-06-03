@@ -35,8 +35,6 @@ class MainToolBar(QToolBar):
         self.addAction(a.synthesize)
         self.addAction(a.place_and_route)
         self.addAction(a.view_waves)
-        self.addAction(a.toggle_terminal)
-
         self.addSeparator()
 
         mod_label = QLabel("Module:")

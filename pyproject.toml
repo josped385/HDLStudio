@@ -3,6 +3,7 @@ name = "hdlstudio"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "pyinstaller==6.20.0",
     "pyqt6==6.11.0",
     "pyqt6-qscintilla==2.14.1",
     "pyqt6-sip>=13.11.1",
