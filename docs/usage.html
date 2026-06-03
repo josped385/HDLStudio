@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Usage Guide — HDLStudio</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="install.html">Installation</a>
+    <a href="usage.html" class="active">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html">Features</a>
+    <a href="extensions.html">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <h1>Usage Guide</h1>
+    <p class="subtitle">How to use HDLStudio for your hardware design workflow.</p>
+
+    <h2>Opening a Project</h2>
+    <p>Click <strong>File &gt; Open Folder</strong> (or <code>Ctrl+K Ctrl+O</code>) and select a directory containing your HDL source files. The file explorer in the activity bar will show all files.</p>
+
+    <h2>Editing HDL</h2>
+    <p>Double-click a file in the explorer to open it in a new tab. The editor provides:</p>
+    <ul>
+      <li>Syntax highlighting for <code>.v</code>, <code>.sv</code>, <code>.vhdl</code>, <code>.vhd</code></li>
+      <li>Autocompletion and code snippets</li>
+      <li>Hover documentation showing port directions and signal widths</li>
+      <li>Find &amp; Replace (<code>Ctrl+F</code>) across the current file or all open files</li>
+    </ul>
+
+    <h2>Simulation</h2>
+    <h3>Selecting a Simulator</h3>
+    <p>The toolbar has a <strong>Simulator:</strong> dropdown that lets you switch between <strong>Icarus Verilog</strong> (default, bundled) and <strong>Verilator</strong> (requires WSL2).</p>
+
+    <h3>Compiling</h3>
+    <ul>
+      <li><strong>F5</strong> — Compile the current file</li>
+      <li><strong>F6</strong> — Compile all files in the project</li>
+    </ul>
+    <p>Icarus produces a <code>.vvp</code> file. Verilator produces an executable binary in <code>build/verilator_obj/</code>.</p>
+
+    <h3>Running Simulation</h3>
+    <ul>
+      <li><strong>F9</strong> — Run the compiled simulation (writes a <code>.vcd</code> trace)</li>
+    </ul>
+
+    <h3>Viewing Waveforms</h3>
+    <ul>
+      <li><strong>F7</strong> — Open the generated VCD file in GTKWave</li>
+    </ul>
+
+    <h3>Auto-generating a Testbench</h3>
+    <p>Right-click any module in the hierarchy panel and select <strong>Generate Testbench</strong>, or use <strong>Tools &gt; Generate Testbench</strong>. HDLStudio will parse the module ports, detect clock signals (by name conventions), and create a testbench skeleton with <code>$dumpvars</code> and clock stimuli.</p>
+
+    <h2>Synthesis</h2>
+    <p>Right-click a file in the explorer and select <strong>Synthesize</strong>, or go to <strong>Tools &gt; Synthesize</strong> (<code>Ctrl+Shift+Y</code>). Choose the output format:</p>
+    <table>
+      <tr><th>Extension</th><th>Yosys Script</th><th>Typical Use</th></tr>
+      <tr><td><code>.blif</code></td><td><code>synth; write_blif</code></td><td>General logic representation</td></tr>
+      <tr><td><code>.json</code></td><td><code>synth_ice40 -json</code></td><td>Preparing for nextpnr-ice40</td></tr>
+      <tr><td><code>.v</code></td><td><code>synth; write_verilog</code></td><td>Post-synthesis netlist</td></tr>
+      <tr><td><code>.edif</code></td><td><code>synth; write_edif</code></td><td>Third-party EDA interchange</td></tr>
+    </table>
+
+    <h2>Schematic View</h2>
+    <p>After synthesis, right-click the output file and select <strong>Show Schematic</strong>, or right-click any HDL file and select <strong>Show Schematic from HDL</strong>. HDLStudio runs <code>yosys show -format dot</code> and converts the DOT output to an SVG via Graphviz. The schematic is displayed in a dialog window.</p>
+
+    <h2>Place &amp; Route</h2>
+    <p>Right-click a synthesized JSON file and select <strong>Place &amp; Route</strong> (<code>Ctrl+Shift+P</code>), or use the toolbar button / <strong>Tools &gt; Place &amp; Route</strong>.</p>
+    <p>HDLStudio runs <code>yowasp-nextpnr-ice40</code> with your JSON, producing an <code>.asc</code> bitstream file, plus a report with logic cell usage, I/O block counts and delay line data.</p>
+    <p>A summary dialog displays structured metrics. The complete log is available in the PnR output window.</p>
+
+    <h2>Keyboard Shortcuts</h2>
+    <table>
+      <tr><th>Shortcut</th><th>Action</th></tr>
+      <tr><td><code>F5</code></td><td>Compile current file</td></tr>
+      <tr><td><code>F6</code></td><td>Compile project (all files)</td></tr>
+      <tr><td><code>F9</code></td><td>Run simulation</td></tr>
+      <tr><td><code>F7</code></td><td>Open waveform in GTKWave</td></tr>
+      <tr><td><code>Ctrl+Shift+Y</code></td><td>Synthesize</td></tr>
+      <tr><td><code>Ctrl+Shift+P</code></td><td>Place &amp; Route</td></tr>
+      <tr><td><code>Ctrl+T</code></td><td>Toggle dark/light theme</td></tr>
+      <tr><td><code>Ctrl+K Ctrl+O</code></td><td>Open folder</td></tr>
+      <tr><td><code>Ctrl+F</code></td><td>Find in file</td></tr>
+      <tr><td><code>Ctrl+H</code></td><td>Find &amp; replace in file</td></tr>
+    </table>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

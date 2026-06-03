@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDLStudio — Modern IDE for Digital Hardware Design</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html" class="active">Overview</a>
+    <a href="install.html">Installation</a>
+    <a href="usage.html">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html">Features</a>
+    <a href="extensions.html">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <div class="hero">
+      <h1>HDLStudio</h1>
+      <p>A modern, self-contained IDE for Verilog, SystemVerilog and VHDL design — with simulation, synthesis, place &amp; route, and waveform viewing.</p>
+      <a href="install.html" class="btn primary">Get Started</a>
+      <a href="https://github.com/josped385/HDLStudio" class="btn secondary">GitHub</a>
+    </div>
+
+    <h2>What is HDLStudio?</h2>
+    <p>HDLStudio is an open-source integrated development environment for digital hardware design. It bundles all the essential tools — Icarus Verilog, GTKWave, Graphviz — so you can start designing without hunting for dependencies.</p>
+
+    <h2>Key Features</h2>
+    <div class="cards">
+      <div class="card">
+        <span class="icon">&#x270F;</span>
+        <h3>Code Editor</h3>
+        <p>Syntax highlighting, autocompletion, snippets and hover docs for Verilog, SystemVerilog and VHDL.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#x2699;</span>
+        <h3>Dual Simulator</h3>
+        <p>Compile and run with Icarus Verilog (bundled) or Verilator (via WSL). Switch at any time.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#x1F4CA;</span>
+        <h3>Waveform Viewer</h3>
+        <p>Launch GTKWave directly from the IDE to inspect VCD, FST, LXT and GHW traces.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#x1F3ED;</span>
+        <h3>Synthesis</h3>
+        <p>Yosys-based synthesis with BLIF, JSON, Verilog and EDIF output formats.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#x1F50C;</span>
+        <h3>Place &amp; Route</h3>
+        <p>nextpnr-ice40 for Lattice iCE40 FPGAs with structured metrics reports.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#x1F4E6;</span>
+        <h3>Extensible</h3>
+        <p>Python-based plugin system lets you add toolbar actions, menu items, bottom-panel tabs and more.</p>
+      </div>
+    </div>
+
+    <h2>Quick Start</h2>
+    <div class="alert info">All bundled tools are included. No separate downloads needed for basic use.</div>
+    <pre><code class="lang-tag">bash</code>git clone https://github.com/josped385/HDLStudio.git
+cd HDLStudio
+pip install -r requirements.txt
+python main.py</pre>
+    <p>Select an HDL file in the file explorer, pick your simulator from the toolbar, and press <strong>F5</strong> to compile.</p>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extension API — HDLStudio</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="install.html">Installation</a>
+    <a href="usage.html">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html">Features</a>
+    <a href="extensions.html" class="active">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <h1>Extension API</h1>
+    <p class="subtitle">Extend HDLStudio with Python plugins.</p>
+
+    <h2>Overview</h2>
+    <p>HDLStudio has a plugin system that lets you add custom functionality without modifying the core application. Extensions live in the <code>extensions/</code> directory, each in its own subdirectory with a <code>manifest.json</code> and Python code.</p>
+
+    <h2>Structure</h2>
+    <pre><code class="lang-tag">text</code>extensions/
+  my_extension/
+    manifest.json
+    main.py
+    ...</pre>
+
+    <h2>Manifest</h2>
+    <table>
+      <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>id</code></td><td>string</td><td>Unique identifier (e.g. <code>"my_extension"</code>)</td></tr>
+      <tr><td><code>name</code></td><td>string</td><td>Human-readable name</td></tr>
+      <tr><td><code>version</code></td><td>string</td><td>Semantic version</td></tr>
+      <tr><td><code>description</code></td><td>string</td><td>Short description</td></tr>
+      <tr><td><code>enabled</code></td><td>bool</td><td>Loaded on startup if <code>true</code></td></tr>
+    </table>
+
+    <p>Example <code>manifest.json</code>:</p>
+    <pre><code class="lang-tag">json</code>{
+  "id": "hello_world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "A sample extension",
+  "enabled": true
+}</pre>
+
+    <h2>Extension Base Class</h2>
+    <p>Your <code>main.py</code> must export a class that inherits from <code>Extension</code> (imported from <code>core.extension_base</code>) and implements at least <code>on_load</code>:</p>
+
+    <pre><code class="lang-tag">python</code>from core.extension_base import Extension
+
+class HelloExtension(Extension):
+    def on_load(self, api):
+        # Register a tool menu action
+        action = api.register_action(
+            "hello_world.say_hello",
+            self.say_hello,
+            label="Say Hello",
+            tooltip="Prints Hello to the console"
+        )
+        api.add_tools_menu_action(action)
+        api.print("Hello extension loaded!")
+
+    def on_unload(self, api):
+        api.print("Hello extension unloaded!")
+
+    def say_hello(self):
+        self.api.print("Hello from the extension!")</pre>
+
+    <h2>ExtensionAPI Reference</h2>
+
+    <h3>Actions</h3>
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>register_action(id, callback, label, tooltip, icon_path)</code></td><td>Register a named action with optional icon</td></tr>
+      <tr><td><code>add_tools_menu_action(action)</code></td><td>Add action to the Tools menu</td></tr>
+      <tr><td><code>add_toolbar_action(action)</code></td><td>Add action to the main toolbar</td></tr>
+      <tr><td><code>add_activity_bar_action(action, position)</code></td><td>Add a button to the activity bar (position: <code>"top"</code> or <code>"bottom"</code>)</td></tr>
+      <tr><td><code>add_context_menu_action(action, file_pattern)</code></td><td>Add a right-click action in the file explorer (supports <code>*.v</code>, <code>*.vhdl</code>, etc.)</td></tr>
+      <tr><td><code>remove_action(action_id)</code></td><td>Remove a previously registered action</td></tr>
+    </table>
+
+    <h3>UI Panels</h3>
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>add_bottom_panel_tab(widget, title)</code></td><td>Add a custom widget as a new tab in the bottom panel</td></tr>
+      <tr><td><code>remove_bottom_panel_tab(title)</code></td><td>Remove a previously added tab</td></tr>
+    </table>
+
+    <h3>Console &amp; Settings</h3>
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>print(text)</code></td><td>Write a line to the IDE console with the extension's prefix</td></tr>
+      <tr><td><code>settings</code></td><td>Returns a <code>QSettings</code> instance scoped to this extension</td></tr>
+    </table>
+
+    <h2>Extension Manager</h2>
+    <p>The <strong>Settings &gt; Extensions</strong> tab lists all discovered extensions and lets you enable/disable them individually. Disabling an extension calls its <code>on_unload()</code> hook and prevents it from loading on the next startup.</p>
+    <p>You can also open the <code>extensions/</code> folder directly from the settings dialog.</p>
+
+    <h2>Sample</h2>
+    <p>A ready-to-use sample extension is included at <code>extensions/sample_hello/</code>. Enable it in the Settings dialog, then look for <strong>Say Hello</strong> in the Tools menu.</p>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

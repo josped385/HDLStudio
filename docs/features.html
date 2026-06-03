@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Features — HDLStudio</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="install.html">Installation</a>
+    <a href="usage.html">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html" class="active">Features</a>
+    <a href="extensions.html">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <h1>Features</h1>
+    <p class="subtitle">A comprehensive tour of everything HDLStudio can do.</p>
+
+    <h2>Editor</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Syntax highlighting for Verilog, SystemVerilog and VHDL</li>
+      <li><span class="check">&#x2713;</span> Autocompletion and code snippets</li>
+      <li><span class="check">&#x2713;</span> Hover documentation (port types, signal widths)</li>
+      <li><span class="check">&#x2713;</span> Find and replace across all open files</li>
+      <li><span class="check">&#x2713;</span> Configurable font family, size, tab width and word wrap</li>
+      <li><span class="check">&#x2713;</span> Multiple tabs with unsaved-changes indicator</li>
+      <li><span class="check">&#x2713;</span> Error markers on compilation failure (clickable error links in console)</li>
+    </ul>
+
+    <h2>Project Management</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> File explorer with tree view (expand/collapse, right-click actions)</li>
+      <li><span class="check">&#x2713;</span> Open folder as project root</li>
+      <li><span class="check">&#x2713;</span> Auto-detection of module and testbench files (by filename convention)</li>
+      <li><span class="check">&#x2713;</span> Manual override via Module / Testbench dropdowns in the toolbar</li>
+      <li><span class="check">&#x2713;</span> Module hierarchy tree and signal/port browser</li>
+    </ul>
+
+    <h2>Simulation</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Compile and run with <strong>Icarus Verilog</strong> (bundled in <code>tools/iverilog/</code>)</li>
+      <li><span class="check">&#x2713;</span> Compile and run with <strong>Verilator</strong> (via WSL2 + Ubuntu, optional)</li>
+      <li><span class="check">&#x2713;</span> Simulator selector in the toolbar — switch without restart</li>
+      <li><span class="check">&#x2713;</span> Automatic testbench generation from any module/entity</li>
+      <li><span class="check">&#x2713;</span> Detects clock ports and generates clock stimuli</li>
+      <li><span class="check">&#x2713;</span> Open GTKWave with the generated VCD/FST at the press of a key (F7)</li>
+    </ul>
+
+    <h2>Synthesis</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Yosys-based synthesis (installed via <code>yowasp-yosys</code> pip package)</li>
+      <li><span class="check">&#x2713;</span> Output formats: BLIF, JSON, Verilog, EDIF</li>
+      <li><span class="check">&#x2713;</span> Synthesize from right-click menu or Tools menu</li>
+    </ul>
+
+    <h2>Schematic Viewer</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Gate-level schematic generated via Yosys <code>show</code> + Graphviz <code>dot</code></li>
+      <li><span class="check">&#x2713;</span> Can start from an HDL file or from a previous synthesis BLIF</li>
+      <li><span class="check">&#x2713;</span> SVG output displayed in a dialog, fallback to raw DOT text</li>
+    </ul>
+
+    <h2>Place &amp; Route</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> nextpnr-ice40 integration for Lattice iCE40 FPGAs (via <code>yowasp-nextpnr-ice40</code>)</li>
+      <li><span class="check">&#x2713;</span> Automatic detection of last synthesis JSON output</li>
+      <li><span class="check">&#x2713;</span> Structured metrics dialog (logic cells, I/O, delay lines)</li>
+      <li><span class="check">&#x2713;</span> Full log capture and display</li>
+    </ul>
+
+    <h2>UI &amp; Customisation</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Dark and light themes (toggle with <code>Ctrl+T</code>)</li>
+      <li><span class="check">&#x2713;</span> Activity bar with file explorer, hierarchy, signals, templates, git</li>
+      <li><span class="check">&#x2713;</span> Bottom panel with Console, Terminal, Log and History tabs</li>
+      <li><span class="check">&#x2713;</span> Settings dialog (Editor font/size/tabs, auto-save, extensions)</li>
+      <li><span class="check">&#x2713;</span> Python plugin system (<code>extensions/</code> directory)</li>
+    </ul>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

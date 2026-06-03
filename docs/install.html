@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installation — HDLStudio</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="install.html" class="active">Installation</a>
+    <a href="usage.html">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html">Features</a>
+    <a href="extensions.html">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <h1>Installation</h1>
+    <p class="subtitle">Running HDLStudio on Windows 10 / 11.</p>
+
+    <h2>Prerequisites</h2>
+    <table>
+      <tr><th>Dependency</th><th>Required?</th><th>Notes</th></tr>
+      <tr><td>Python 3.10+</td><td>Yes</td><td>64-bit recommended</td></tr>
+      <tr><td>pip</td><td>Yes</td><td>Included with Python</td></tr>
+      <tr><td>Git</td><td>For updates</td><td><code>git clone</code> the repo</td></tr>
+      <tr><td>WSL2 + Ubuntu</td><td>Optional</td><td>For Verilator support</td></tr>
+    </table>
+
+    <h2>Step-by-step</h2>
+    <ol class="steps">
+      <li>
+        <strong>Clone the repository</strong>
+        <pre><code class="lang-tag">bash</code>git clone https://github.com/josped385/HDLStudio.git
+cd HDLStudio</pre>
+      </li>
+      <li>
+        <strong>Create a virtual environment (recommended)</strong>
+        <pre><code class="lang-tag">bash</code>python -m venv venv
+.\venv\Scripts\activate</pre>
+      </li>
+      <li>
+        <strong>Install dependencies</strong>
+        <pre><code class="lang-tag">bash</code>pip install -r requirements.txt</pre>
+      </li>
+      <li>
+        <strong>Launch the IDE</strong>
+        <pre><code class="lang-tag">bash</code>python main.py</pre>
+      </li>
+    </ol>
+
+    <p>Icarus Verilog, GTKWave and Graphviz are bundled in <code>tools/</code>. Yosys and nextpnr-ice40 are installed via pip (<code>yowasp-yosys</code>, <code>yowasp-nextpnr-ice40</code>).</p>
+
+    <h2>Optional: Verilator (WSL2)</h2>
+    <div class="alert info">Verilator does not run natively on Windows. It must be used through WSL2.</div>
+    <ol class="steps">
+      <li><strong>Install WSL2</strong> — run <code>wsl --install -d Ubuntu</code> in an admin PowerShell</li>
+      <li><strong>Install build tools in Ubuntu</strong>
+        <pre><code class="lang-tag">bash</code>sudo apt update
+sudo apt install build-essential git help2man libgoogle-perftools-dev
+sudo apt install numactl perl python3 python3-venv
+sudo apt install autoconf flex bison ccache libfl-dev libgd-dev</pre></li>
+      <li><strong>Build and install Verilator</strong>
+        <pre><code class="lang-tag">bash</code>git clone https://github.com/verilator/verilator --depth 1
+cd verilator
+autoconf
+./configure --prefix=/usr/local
+make -j$(nproc)
+sudo make install</pre></li>
+    </ol>
+    <p>HDLStudio detects Verilator automatically by running <code>wsl verilator --version</code>. Select "Verilator" from the simulator dropdown in the toolbar.</p>
+
+    <h2>Optional: PyInstaller Build</h2>
+    <p>To package HDLStudio into a standalone <code>.exe</code>:</p>
+    <pre><code class="lang-tag">bash</code>pip install pyinstaller
+pyinstaller --noconfirm --onefile --windowed --add-data "tools;tools" main.py</pre>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

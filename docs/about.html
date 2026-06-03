@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — HDLStudio</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">HDL<span>Studio</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="install.html">Install</a>
+    <a href="usage.html">Usage</a>
+    <a href="extensions.html">Extensions</a>
+    <a href="about.html">About</a>
+  </nav>
+</div>
+
+<div class="wrapper">
+  <aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="install.html">Installation</a>
+    <a href="usage.html">Usage Guide</a>
+    <div class="section-title">Reference</div>
+    <a href="features.html">Features</a>
+    <a href="extensions.html">Extension API</a>
+    <div class="section-title">Project</div>
+    <a href="about.html" class="active">About &amp; License</a>
+  </aside>
+
+  <main class="content">
+    <h1>About &amp; License</h1>
+    <p class="subtitle">HDLStudio &mdash; A modern IDE for digital hardware design.</p>
+
+    <h2>Author</h2>
+    <p><strong>Jos&eacute; Pedro Granado Olmo</strong> &mdash; <a href="https://github.com/josped385">@josped385</a></p>
+
+    <h2>License</h2>
+    <p>HDLStudio is free software released under the <strong>GNU General Public License v3</strong> (GPL v3).</p>
+    <pre><code class="lang-tag">text</code>HDLStudio - A modern IDE for digital hardware design
+Copyright (C) 2025  Jos&eacute; Pedro Granado Olmo
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</pre>
+    <p>The full license text is available in the <code>LICENSE</code> file at the project root.</p>
+
+    <h2>Third-Party Software &amp; Licensing</h2>
+    <table>
+      <tr><th>Component</th><th>License</th><th>Bundled?</th></tr>
+      <tr><td>PyQt6</td><td>GPL v3</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>QtScintilla</td><td>GPL v3</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>Icarus Verilog</td><td>GPL v2+</td><td>&#x2713; (tools/)</td></tr>
+      <tr><td>GTKWave</td><td>GPL v2</td><td>&#x2713; (tools/)</td></tr>
+      <tr><td>Graphviz</td><td>EPL v1</td><td>&#x2713; (tools/)</td></tr>
+      <tr><td>Yosys (yowasp-yosys)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>nextpnr-ice40 (yowasp-nextpnr-ice40)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>Verilator</td><td>LGPL v3 / Artistic 2.0</td><td>WSL2 only</td></tr>
+    </table>
+    <p>Note: GPL v3 was chosen because PyQt6 requires it. All other tools are compatible with this license.</p>
+
+    <h2>Features at a Glance</h2>
+    <ul>
+      <li>Code editor with syntax highlighting for Verilog, SystemVerilog, VHDL</li>
+      <li>Simulation with Icarus Verilog (bundled) or Verilator (WSL2)</li>
+      <li>GTKWave waveform viewer (bundled)</li>
+      <li>Yosys-based synthesis (BLIF, JSON, Verilog, EDIF)</li>
+      <li>Gate-level schematic viewer (Yosys + Graphviz)</li>
+      <li>Lattice iCE40 place &amp; route (nextpnr-ice40)</li>
+      <li>Python extension/plugin system</li>
+      <li>Dark and light themes</li>
+      <li>Settings dialog with editor and extension configuration</li>
+    </ul>
+
+    <h2>Acknowledgements</h2>
+    <p>HDLStudio uses the <code>yowasp</code> Wasm packages for Yosys and nextpnr-ice40, making synthesis and PnR available without requiring MSYS2/MinGW builds on Windows.</p>
+    <p>Thanks to the open-source hardware community for creating and maintaining the underlying tools.</p>
+
+  </main>
+</div>
+
+<div class="footer">
+  HDLStudio &mdash; GPL v3 &mdash; <a href="https://github.com/josped385">@josped385</a>
+</div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
