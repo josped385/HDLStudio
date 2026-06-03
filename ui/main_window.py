@@ -361,16 +361,26 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
         self._refresh_build_context(path)
 
+        bs = self.build_system
         base = os.path.splitext(os.path.basename(path))[0]
-        default = f"build/{base}.vvp"
-
-        vvp_path, _ = QFileDialog.getSaveFileName(
-            self, f"Compile {os.path.basename(path)}",
-            default,
-            "VVP files (*.vvp);;All Files (*)"
-        )
-        if not vvp_path:
-            return
+        if bs.simulator == bs.SIM_VERILATOR:
+            default = f"build/{base}_vlsim"
+            vvp_path, _ = QFileDialog.getSaveFileName(
+                self, f"Compile {os.path.basename(path)} with Verilator",
+                default,
+                "All Files (*)"
+            )
+            if not vvp_path:
+                return
+        else:
+            default = f"build/{base}.vvp"
+            vvp_path, _ = QFileDialog.getSaveFileName(
+                self, f"Compile {os.path.basename(path)}",
+                default,
+                "VVP files (*.vvp);;All Files (*)"
+            )
+            if not vvp_path:
+                return
 
         self.status.showMessage("Compiling...")
         self.bottom_panel.clear_console()
@@ -383,7 +393,7 @@ class MainWindow(QMainWindow):
             raw_buf.append(text)
             self.bottom_panel.write_raw(text)
 
-        ok = self.build_system.compile(write, output_path=vvp_path)
+        ok = bs.compile(write, output_path=vvp_path)
         self.bottom_panel.append_history(f"Compiled {os.path.basename(path)}")
         if ok:
             self.bottom_panel.write_ok("Compilation successful")
@@ -395,6 +405,12 @@ class MainWindow(QMainWindow):
     def run_file(self, path):
         self._ensure_files_saved()
         self._refresh_build_context()
+
+        bs = self.build_system
+        if bs.simulator == bs.SIM_VERILATOR:
+            sim_path = None
+        else:
+            sim_path = path
 
         vcd_path, _ = QFileDialog.getSaveFileName(
             self, f"Run {os.path.basename(path)}",
@@ -410,17 +426,17 @@ class MainWindow(QMainWindow):
 
         write = self.bottom_panel.write_raw
 
-        ok = self.build_system.run(write, vvp_path=path)
+        ok = bs.run(write, sim_path=sim_path)
         self.bottom_panel.append_history(f"Ran {os.path.basename(path)}")
 
         if ok:
-            generated = self.build_system.last_vcd_path
+            generated = bs.last_vcd_path
             if generated and os.path.isfile(generated):
                 os.makedirs(os.path.dirname(vcd_path), exist_ok=True)
                 try:
                     if os.path.normpath(generated) != os.path.normpath(vcd_path):
                         os.replace(generated, vcd_path)
-                    self.build_system.last_vcd_path = vcd_path
+                    bs.last_vcd_path = vcd_path
                     write(f"\n>> Waveform saved as: {os.path.basename(vcd_path)}\n")
                     write(f"   Press F7 to open in GTKWave\n")
                 except OSError as e:
@@ -516,10 +532,13 @@ class MainWindow(QMainWindow):
 
     def _warn_if_no_iverilog(self):
 
+        msgs = []
         if not self.build_system.iverilog_available():
-            self.status.showMessage(
-                "Icarus Verilog not found in tools/iverilog/ — compile/run disabled"
-            )
+            msgs.append("Icarus Verilog not found in tools/iverilog/")
+        if not self.build_system.verilator_available():
+            msgs.append("Verilator not found on PATH")
+        if msgs:
+            self.status.showMessage(" — ".join(msgs))
 
     # ---------------- CLOSE EVENT ----------------
 
@@ -578,13 +597,23 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
         self._refresh_build_context()
 
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save compiled simulation as",
-            "build/simulation.vvp",
-            "VVP files (*.vvp);;All Files (*)"
-        )
-        if not path:
-            return
+        bs = self.build_system
+        if bs.simulator == bs.SIM_VERILATOR:
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save Verilator simulation as",
+                "build/simulation_vlsim",
+                "All Files (*)"
+            )
+            if not path:
+                return
+        else:
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save compiled simulation as",
+                "build/simulation.vvp",
+                "VVP files (*.vvp);;All Files (*)"
+            )
+            if not path:
+                return
 
         self.status.showMessage("Compiling...")
         self.bottom_panel.clear_console()
@@ -597,7 +626,7 @@ class MainWindow(QMainWindow):
             raw_buf.append(text)
             self.bottom_panel.write_raw(text)
 
-        ok = self.build_system.compile(write, output_path=path)
+        ok = bs.compile(write, output_path=path)
         self.bottom_panel.append_history("Compiled project")
         if ok:
             self.bottom_panel.write_ok("Compilation successful")
@@ -611,13 +640,17 @@ class MainWindow(QMainWindow):
         self._ensure_files_saved()
         self._refresh_build_context()
 
-        vvp_path, _ = QFileDialog.getOpenFileName(
-            self, "Select simulation to run",
-            "build/",
-            "VVP files (*.vvp);;All Files (*)"
-        )
-        if not vvp_path:
-            return
+        bs = self.build_system
+        if bs.simulator == bs.SIM_VERILATOR:
+            sim_path = None
+        else:
+            sim_path, _ = QFileDialog.getOpenFileName(
+                self, "Select simulation to run",
+                "build/",
+                "VVP files (*.vvp);;All Files (*)"
+            )
+            if not sim_path:
+                return
 
         vcd_path, _ = QFileDialog.getSaveFileName(
             self, "Save waveform as",
@@ -633,17 +666,17 @@ class MainWindow(QMainWindow):
 
         write = self.bottom_panel.write_raw
 
-        ok = self.build_system.run(write, vvp_path=vvp_path)
+        ok = bs.run(write, sim_path=sim_path)
         self.bottom_panel.append_history("Ran project simulation")
 
         if ok:
-            generated = self.build_system.last_vcd_path
+            generated = bs.last_vcd_path
             if generated and os.path.isfile(generated):
                 os.makedirs(os.path.dirname(vcd_path), exist_ok=True)
                 try:
                     if os.path.normpath(generated) != os.path.normpath(vcd_path):
                         os.replace(generated, vcd_path)
-                    self.build_system.last_vcd_path = vcd_path
+                    bs.last_vcd_path = vcd_path
                     write(f"\n>> Waveform saved as: {os.path.basename(vcd_path)}\n")
                     write(f"   Press F7 to open in GTKWave\n")
                 except OSError as e:

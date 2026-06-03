@@ -1,6 +1,8 @@
 import os
 from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox, QWidget, QSizePolicy
 
+from core.build_system import BuildSystem
+
 
 class MainToolBar(QToolBar):
 
@@ -59,6 +61,18 @@ class MainToolBar(QToolBar):
         self.tb_combo.currentIndexChanged.connect(self._on_tb_changed)
         self.addWidget(self.tb_combo)
 
+        sim_label = QLabel("Simulator:")
+        sim_label.setStyleSheet("color: #aaaaaa; padding-left: 4px;")
+        self.addWidget(sim_label)
+
+        self.sim_combo = QComboBox()
+        self.sim_combo.setMinimumWidth(100)
+        self.sim_combo.setMaximumWidth(140)
+        self.sim_combo.addItem("Icarus Verilog", BuildSystem.SIM_ICARUS)
+        self.sim_combo.addItem("Verilator", BuildSystem.SIM_VERILATOR)
+        self.sim_combo.currentIndexChanged.connect(self._on_simulator_changed)
+        self.addWidget(self.sim_combo)
+
         spacer = QWidget()
         spacer.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -81,9 +95,14 @@ class MainToolBar(QToolBar):
         path = self.tb_combo.itemData(index)
         self.main.build_system.testbench_file = path
 
+    def _on_simulator_changed(self, index):
+        sim = self.sim_combo.itemData(index)
+        self.main.build_system.simulator = sim
+
     def refresh_file_lists(self):
         self.module_combo.blockSignals(True)
         self.tb_combo.blockSignals(True)
+        self.sim_combo.blockSignals(True)
 
         self.module_combo.clear()
         self.tb_combo.clear()
@@ -121,5 +140,10 @@ class MainToolBar(QToolBar):
         self.module_combo.setCurrentIndex(idx_module)
         self.tb_combo.setCurrentIndex(idx_tb)
 
+        idx_sim = self.sim_combo.findData(bs.simulator)
+        if idx_sim >= 0:
+            self.sim_combo.setCurrentIndex(idx_sim)
+
         self.module_combo.blockSignals(False)
         self.tb_combo.blockSignals(False)
+        self.sim_combo.blockSignals(False)

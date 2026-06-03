@@ -10,6 +10,9 @@ HDLSTUDIO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class BuildSystem:
 
+    SIM_ICARUS = "icarus"
+    SIM_VERILATOR = "verilator"
+
     def __init__(self, project):
         self.project = project
         self.working_dir = None
@@ -18,6 +21,7 @@ class BuildSystem:
         self.output_name = "simulation.vvp"
         self.build_dir_name = "build"
         self.last_vcd_path = None
+        self.simulator = self.SIM_ICARUS
 
     @property
     def _iverilog_path(self):
@@ -38,6 +42,41 @@ class BuildSystem:
 
     def vvp_available(self):
         return os.path.isfile(self._vvp_path)
+
+    def _find_verilator_cmd(self):
+        direct = shutil.which("verilator")
+        if direct:
+            return [direct]
+        try:
+            result = subprocess.run(
+                ["wsl", "verilator", "--version"],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.returncode == 0:
+                return ["wsl", "verilator"]
+        except Exception:
+            pass
+        return None
+
+    def _win_to_wsl_path(self, win_path):
+        win_path = os.path.normpath(win_path)
+        drive = win_path[0].lower()
+        rest = win_path[3:].replace("\\", "/")
+        return f"/mnt/{drive}/{rest}"
+
+    def _wsl_run(self, cmd_list):
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        return subprocess.run(
+            ["wsl"] + cmd_list,
+            capture_output=True, text=True,
+            startupinfo=startupinfo,
+        )
+
+    def verilator_available(self):
+        return self._find_verilator_cmd() is not None
 
     _SKIP_DIRS = {"tools", ".venv", ".git", "__pycache__"}
 
@@ -87,7 +126,25 @@ class BuildSystem:
             self.module_file = module_candidates[0] if module_candidates else files[0]
             self.testbench_file = files[1] if len(files) > 1 else None
 
+    def _gather_sources(self, terminal_callback):
+        sources = []
+        if self.module_file and os.path.isfile(self.module_file):
+            sources.append(self.module_file)
+        if self.testbench_file and os.path.isfile(self.testbench_file):
+            if self.testbench_file not in sources:
+                sources.append(self.testbench_file)
+        if not sources:
+            sources = self.collect_hdl_files()
+            if not sources:
+                terminal_callback("No HDL files found.\n")
+        return sources
+
     def compile(self, terminal_callback, output_path=None):
+        if self.simulator == self.SIM_VERILATOR:
+            return self._compile_verilator(terminal_callback, output_path)
+        return self._compile_icarus(terminal_callback, output_path)
+
+    def _compile_icarus(self, terminal_callback, output_path=None):
         root = self.root_dir
         if not root:
             terminal_callback("No project or file open.\n")
@@ -100,18 +157,9 @@ class BuildSystem:
             )
             return False
 
-        sources = []
-        if self.module_file and os.path.isfile(self.module_file):
-            sources.append(self.module_file)
-        if self.testbench_file and os.path.isfile(self.testbench_file):
-            if self.testbench_file not in sources:
-                sources.append(self.testbench_file)
-
+        sources = self._gather_sources(terminal_callback)
         if not sources:
-            sources = self.collect_hdl_files()
-            if not sources:
-                terminal_callback("No HDL files found.\n")
-                return False
+            return False
 
         if output_path:
             out_dir = os.path.dirname(output_path)
@@ -155,6 +203,105 @@ class BuildSystem:
         terminal_callback(f"\nCompilation failed (exit code {result.returncode})\n")
         return False
 
+    def _compile_verilator(self, terminal_callback, output_path=None):
+        root = self.root_dir
+        if not root:
+            terminal_callback("No project or file open.\n")
+            return False
+
+        verilator_cmd = self._find_verilator_cmd()
+        if not verilator_cmd:
+            terminal_callback("verilator not found.\nInstall Verilator (on PATH or via WSL) and try again.\n")
+            return False
+
+        sources = self._gather_sources(terminal_callback)
+        if not sources:
+            return False
+
+        if not self.testbench_file:
+            terminal_callback("A testbench file must be selected for Verilator.\n")
+            return False
+
+        tb_base = os.path.splitext(os.path.basename(self.testbench_file))[0]
+        build_dir = os.path.join(root, self.build_dir_name)
+        os.makedirs(build_dir, exist_ok=True)
+
+        if verilator_cmd == ["wsl", "verilator"]:
+            # Build inside WSL tmp to avoid NTFS performance/compatibility issues.
+            # The executable will be copied back to build/verilator_obj/ afterwards.
+            import uuid
+            ws = f"/tmp/hdl_vl_{uuid.uuid4().hex[:8]}"
+            wsl_tmp = ws
+
+            # Copy sources into WSL tmp
+            self._wsl_run(["mkdir", "-p", wsl_tmp])
+            for s in sources:
+                self._wsl_run(["cp", self._win_to_wsl_path(s), f"{wsl_tmp}/{os.path.basename(s)}"])
+
+            src_args = [f"{wsl_tmp}/{os.path.basename(s)}" for s in sources]
+            mdir_arg = f"{wsl_tmp}/obj_dir"
+
+            VL_FLAGS = ["--binary", "--trace", "-j", "4", "-Wno-fatal"]
+            full_cmd = verilator_cmd + VL_FLAGS + [
+                "--top-module", tb_base,
+                "-Mdir", mdir_arg,
+            ] + src_args
+            terminal_callback(f"{' '.join(full_cmd)}\n\n")
+        else:
+            src_args = sources[:]
+            mdir_arg = os.path.join(build_dir, "verilator_obj")
+            VL_FLAGS = ["--binary", "--trace", "-j", "4", "-Wno-fatal"]
+            full_cmd = verilator_cmd + VL_FLAGS + [
+                "--top-module", tb_base,
+                "-Mdir", mdir_arg,
+            ] + src_args
+            terminal_callback(f"{' '.join(full_cmd)}\n\n")
+
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        result = subprocess.run(
+            full_cmd,
+            capture_output=True,
+            text=True,
+            cwd=root,
+            startupinfo=startupinfo,
+        )
+
+        if result.stdout:
+            terminal_callback(result.stdout)
+        if result.stderr:
+            terminal_callback(result.stderr)
+
+        if result.returncode == 0:
+            exe_name = f"V{tb_base}"
+            if verilator_cmd == ["wsl", "verilator"]:
+                # Copy executable back to Windows
+                wsl_exe_src = f"{wsl_tmp}/obj_dir/{exe_name}"
+                tmp_dst = os.path.join(build_dir, "verilator_obj")
+                os.makedirs(tmp_dst, exist_ok=True)
+                local_exe = os.path.join(tmp_dst, exe_name)
+                self._wsl_run(["cp", wsl_exe_src, self._win_to_wsl_path(local_exe)])
+                self._wsl_run(["rm", "-rf", wsl_tmp])
+                final_path = output_path or local_exe
+                if output_path and os.path.normpath(output_path) != os.path.normpath(local_exe):
+                    import shutil
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    shutil.copy2(local_exe, output_path)
+            else:
+                final_path = output_path or os.path.join(build_dir, "verilator_obj", exe_name)
+                if output_path:
+                    import shutil
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    shutil.copy2(os.path.join(build_dir, "verilator_obj", exe_name), output_path)
+            terminal_callback(f"\nVerilator compilation successful -> {final_path}\n")
+            return True
+
+        terminal_callback(f"\nVerilator compilation failed (exit code {result.returncode})\n")
+        return False
+
     def _find_dump_files(self, search_dir):
         """Find waveform dump files (.vcd, .fst, .lxt, .ghw, .vcd.gz) in search_dir."""
         if not search_dir or not os.path.isdir(search_dir):
@@ -173,7 +320,12 @@ class BuildSystem:
             return None
         return max(files, key=os.path.getmtime)
 
-    def run(self, terminal_callback, vvp_path=None):
+    def run(self, terminal_callback, sim_path=None):
+        if self.simulator == self.SIM_VERILATOR:
+            return self._run_verilator(terminal_callback, sim_path)
+        return self._run_icarus(terminal_callback, sim_path)
+
+    def _run_icarus(self, terminal_callback, vvp_path=None):
         root = self.root_dir
         if not root:
             terminal_callback("No project or file open.\n")
@@ -227,6 +379,60 @@ class BuildSystem:
             return True
 
         terminal_callback(f"Simulation exited with code {result.returncode}\n")
+        return False
+
+    def _run_verilator(self, terminal_callback, exe_path=None):
+        root = self.root_dir
+        if not root:
+            terminal_callback("No project or file open.\n")
+            return False
+
+        build_dir = os.path.join(root, self.build_dir_name)
+
+        if not exe_path:
+            if not self.testbench_file:
+                terminal_callback("No testbench selected – cannot determine Verilator executable.\n")
+                return False
+            tb_base = os.path.splitext(os.path.basename(self.testbench_file))[0]
+            exe_name = f"V{tb_base}"
+            exe_path = os.path.join(build_dir, "verilator_obj", exe_name)
+
+        # The executable is a Linux ELF binary (built inside WSL),
+        # so run it via wsl.exe, converting the Windows path to a WSL path.
+        wsl_exe_path = self._win_to_wsl_path(exe_path)
+        wsl_root = self._win_to_wsl_path(root)
+
+        cmd = ["wsl", wsl_exe_path]
+        terminal_callback(f"{' '.join(cmd)}\n\n")
+
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=root,
+            startupinfo=startupinfo,
+        )
+
+        if result.stdout:
+            terminal_callback(result.stdout + "\n")
+        if result.stderr:
+            terminal_callback("[STDERR] " + result.stderr + "\n")
+
+        if result.returncode == 0:
+            terminal_callback("Verilator simulation finished successfully.\n")
+
+            self.last_vcd_path = self._latest_dump(root)
+            if not self.last_vcd_path:
+                self.last_vcd_path = self._latest_dump(build_dir)
+
+            return True
+
+        terminal_callback(f"Verilator simulation exited with code {result.returncode}\n")
         return False
 
     def yosys_available(self):
