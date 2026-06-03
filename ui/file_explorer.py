@@ -39,6 +39,8 @@ class FileExplorer(QTreeView):
 
     def _on_double_click(self, index):
         path = self.model.filePath(index)
+        if os.path.isdir(path):
+            return
         self.file_open_requested.emit(path)
 
     def _file_under_menu(self, pos):
@@ -132,8 +134,9 @@ class FileExplorer(QTreeView):
                 self.pnr_requested.emit(path)
 
     def _show_in_explorer(self, path):
+        import subprocess
         folder = os.path.dirname(path)
-        os.startfile(folder)
+        subprocess.Popen(["explorer", folder])
 
     def _copy_path(self, path):
         cb = QGuiApplication.clipboard()

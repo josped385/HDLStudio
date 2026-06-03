@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
 
     def open_wave_file(self, path):
         if not self.wave_viewer.available:
-            self.status.showMessage("GTKWave not found — check gtkwave/bin/gtkwave.exe")
+            self.status.showMessage("GTKWave not found — check tools/gtkwave/bin/gtkwave.exe")
             return
 
         ok = self.wave_viewer.open(path)
@@ -518,7 +518,7 @@ class MainWindow(QMainWindow):
 
         if not self.build_system.iverilog_available():
             self.status.showMessage(
-                "Icarus Verilog not found in iverilog/ — compile/run disabled"
+                "Icarus Verilog not found in tools/iverilog/ — compile/run disabled"
             )
 
     # ---------------- CLOSE EVENT ----------------
@@ -657,7 +657,7 @@ class MainWindow(QMainWindow):
 
         if not self.wave_viewer.available:
             self.status.showMessage(
-                "GTKWave not found — check gtkwave/bin/gtkwave.exe"
+                "GTKWave not found — check tools/gtkwave/bin/gtkwave.exe"
             )
             return
 

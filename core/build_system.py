@@ -21,11 +21,11 @@ class BuildSystem:
 
     @property
     def _iverilog_path(self):
-        return os.path.join(HDLSTUDIO_ROOT, "iverilog", "bin", "iverilog.exe")
+        return os.path.join(HDLSTUDIO_ROOT, "tools", "iverilog", "bin", "iverilog.exe")
 
     @property
     def _vvp_path(self):
-        return os.path.join(HDLSTUDIO_ROOT, "iverilog", "bin", "vvp.exe")
+        return os.path.join(HDLSTUDIO_ROOT, "tools", "iverilog", "bin", "vvp.exe")
 
     @property
     def root_dir(self):
@@ -39,7 +39,7 @@ class BuildSystem:
     def vvp_available(self):
         return os.path.isfile(self._vvp_path)
 
-    _SKIP_DIRS = {"gtkwave", "iverilog", ".venv", ".git", "__pycache__"}
+    _SKIP_DIRS = {"tools", ".venv", ".git", "__pycache__"}
 
     def collect_hdl_files(self):
         root = self.root_dir
@@ -96,7 +96,7 @@ class BuildSystem:
         if not self.iverilog_available():
             terminal_callback(
                 f"iverilog not found at {self._iverilog_path}\n"
-                "Make sure Icarus Verilog is bundled in the iverilog/ directory.\n"
+                "Make sure Icarus Verilog is bundled in the tools/iverilog/ directory.\n"
             )
             return False
 
@@ -126,7 +126,7 @@ class BuildSystem:
         terminal_callback(f"{' '.join(cmd)}\n\n")
 
         env = os.environ.copy()
-        env["PATH"] = os.path.join(HDLSTUDIO_ROOT, "iverilog", "bin") + os.pathsep + env.get("PATH", "")
+        env["PATH"] = os.path.join(HDLSTUDIO_ROOT, "tools", "iverilog", "bin") + os.pathsep + env.get("PATH", "")
 
         startupinfo = None
         if os.name == "nt":
@@ -196,7 +196,7 @@ class BuildSystem:
         terminal_callback(f"{' '.join(cmd)}\n\n")
 
         env = os.environ.copy()
-        env["PATH"] = os.path.join(HDLSTUDIO_ROOT, "iverilog", "bin") + os.pathsep + env.get("PATH", "")
+        env["PATH"] = os.path.join(HDLSTUDIO_ROOT, "tools", "iverilog", "bin") + os.pathsep + env.get("PATH", "")
 
         startupinfo = None
         if os.name == "nt":

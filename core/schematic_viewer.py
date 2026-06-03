@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 
 HDLSTUDIO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOT_PATH = os.path.join(
-    HDLSTUDIO_ROOT, "graphviz", "Graphviz-15.0.0-win64", "bin", "dot.exe"
+    HDLSTUDIO_ROOT, "tools", "graphviz", "Graphviz-15.0.0-win64", "bin", "dot.exe"
 )
 
 

@@ -74,6 +74,4 @@ initial begin
 
 end
 
-a
-
 endmodule

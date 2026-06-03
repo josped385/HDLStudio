@@ -7,7 +7,7 @@ HDLSTUDIO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def gtkwave_path():
-    exe = os.path.join(HDLSTUDIO_ROOT, "gtkwave", "bin", "gtkwave.exe")
+    exe = os.path.join(HDLSTUDIO_ROOT, "tools", "gtkwave", "bin", "gtkwave.exe")
     return exe if os.path.isfile(exe) else None
 
 

@@ -39,8 +39,27 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# Bundled binaries
-graphviz/
+# Bundled binary tools
+tools/
+
+# Build artifacts
+*.vvp
+*.vcd
+*.fst
+*.ghw
+*.lxt
+*.lxt2
+*.blif
+*.json
+*.asc
+ivl_vhdl_work/
+
+# Examples generated files
+examples/*/*.vvp
+examples/*/*.vcd
+examples/*/*.blif
+examples/*/*.json
+examples/*/*.asc
 
 # Temporary
 tmp/

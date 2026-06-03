@@ -33,8 +33,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Place Icarus Verilog (`iverilog/bin/`) and GTKWave (`gtkwave/bin/`) next to `main.py`,
-or add them to your system PATH. Graphviz `dot.exe` goes under `graphviz/Graphviz-*-win64/bin/`.
+Place Icarus Verilog (`tools/iverilog/bin/`) and GTKWave (`tools/gtkwave/bin/`) next to `main.py`,
+or add them to your system PATH. Graphviz `dot.exe` goes under `tools/graphviz/Graphviz-*-win64/bin/`.
 
 ## License
 
