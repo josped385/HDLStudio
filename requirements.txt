@@ -1,10 +1,17 @@
 # HDLStudio - Python dependencies
 # Install with: pip install -r requirements.txt
 #
-# External tools (install separately):
-#   Icarus Verilog (iverilog)  -- https://github.com/steveicarus/iverilog
-#   GTKWave                    -- https://gtkwave.sourceforge.net
-#   Graphviz                   -- https://graphviz.org/download
+# Bundled tools (in tools/ — no separate install needed):
+#   Icarus Verilog (iverilog, vvp)
+#   GTKWave
+#   Graphviz (dot)
+#
+# Optional tools installed via pip:
+#   yowasp-yosys         -- Verilog/SystemVerilog synthesis
+#   yowasp-nextpnr-ice40 -- FPGA place & route for Lattice iCE40
+#
+# Optional external tool (separate install):
+#   Verilator            -- via WSL2 with Ubuntu
 
 pyqt6>=6.11.0
 pyqt6-qscintilla>=2.14.1
