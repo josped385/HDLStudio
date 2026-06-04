@@ -77,12 +77,12 @@ class FileExplorer(QTreeView):
             gen_tb_action = menu.addAction("Generate Testbench")
             synth_action = menu.addAction(self._icon("synthesize"), "Synthesize")
             show_sch_action = menu.addAction(self._icon("synthesize"), "Show Schematic")
-            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
+            pnr_action = menu.addAction(self._icon("pnr"), "Place && Route")
         elif ext == ".blif":
             show_sch_action = menu.addAction(self._icon("synthesize"), "Show Schematic")
-            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
+            pnr_action = menu.addAction(self._icon("pnr"), "Place && Route")
         elif ext == ".json":
-            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
+            pnr_action = menu.addAction(self._icon("pnr"), "Place && Route")
         elif ext == ".vvp":
             run_action = menu.addAction(self._icon("play"), "Run")
         elif ext in (".vcd", ".fst", ".lxt", ".lxt2", ".ghw"):

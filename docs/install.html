@@ -68,7 +68,7 @@ cd HDLStudio</pre>
       </li>
     </ol>
 
-    <p>Icarus Verilog, GTKWave and Graphviz are bundled in <code>tools/</code>. Yosys and nextpnr-ice40 are installed via pip (<code>yowasp-yosys</code>, <code>yowasp-nextpnr-ice40</code>).</p>
+    <p>Icarus Verilog, GTKWave and Graphviz must be placed in <code>tools/</code> locally — they are <strong>not</strong> distributed in the repository due to their size. Yosys and nextpnr-ice40 are installed via pip (<code>yowasp-yosys</code>, <code>yowasp-nextpnr-ice40</code>).</p>
 
     <h2>Optional: Verilator (WSL2)</h2>
     <div class="alert info">Verilator does not run natively on Windows. It must be used through WSL2.</div>
@@ -92,7 +92,8 @@ sudo make install</pre></li>
     <h2>Optional: PyInstaller Build</h2>
     <p>To package HDLStudio into a standalone <code>.exe</code>:</p>
     <pre><code class="lang-tag">bash</code>pip install pyinstaller
-pyinstaller --noconfirm --onefile --windowed --add-data "tools;tools" main.py</pre>
+pyinstaller --clean HDLStudio.spec</pre>
+    <p>The output appears in <code>dist/HDLStudio/</code>. A standalone installer can be built with Inno Setup 6+ using <code>installer.iss</code>.</p>
 
   </main>
 </div>

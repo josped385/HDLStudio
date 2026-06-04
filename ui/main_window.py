@@ -816,9 +816,10 @@ class MainWindow(QMainWindow):
         if not self.build_system.yosys_available():
             self.status.showMessage("yowasp-yosys not installed — run: pip install yowasp-yosys")
             return
-        from core.schematic_viewer import show_schematic_from_hdl
+        from core.schematic_viewer import show_schematic_from_hdl, show_schematic
         try:
-            dlg = show_schematic_from_hdl(path, self)
+            is_blif = path.lower().endswith(".blif")
+            dlg = show_schematic(path, self) if is_blif else show_schematic_from_hdl(path, self)
             if dlg:
                 dlg.exec()
                 self.status.showMessage(f"Schematic: {os.path.basename(path)}")
@@ -873,7 +874,6 @@ class MainWindow(QMainWindow):
 
     def place_and_route_file(self, path=None):
         if path is None:
-            # Use last synthesis JSON if available
             if self._last_synthesis_json and os.path.isfile(self._last_synthesis_json):
                 path = self._last_synthesis_json
             else:
@@ -897,6 +897,8 @@ class MainWindow(QMainWindow):
             default_asc,
             "ASC (*.asc);;All Files (*)"
         )
+        if not asc_path:
+            return
 
         self.bottom_panel.clear_console()
         self.bottom_panel.tabs.setCurrentIndex(0)

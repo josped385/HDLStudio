@@ -21,9 +21,9 @@ A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL su
 | Component   | Required | Notes                                                  |
 |-------------|----------|--------------------------------------------------------|
 | Python      | Yes      | >= 3.13                                                |
-| Icarus      | Yes      | Bundled in `tools/iverilog/`                            |
-| GTKWave     | Yes      | Bundled in `tools/gtkwave/`                             |
-| Graphviz    | Yes      | Bundled in `tools/graphviz/`                            |
+| Icarus      | Yes      | Local copy in `tools/iverilog/` (not in repo)          |
+| GTKWave     | Yes      | Local copy in `tools/gtkwave/` (not in repo)           |
+| Graphviz    | Yes      | Local copy in `tools/graphviz/` (not in repo)          |
 | Yosys       | Yes      | Installed via pip (`yowasp-yosys`)                      |
 | nextpnr     | Optional | Installed via pip (`yowasp-nextpnr-ice40`)              |
 | Verilator   | Optional | Via WSL2 with Ubuntu (see below)                        |
@@ -47,17 +47,19 @@ pip install -r requirements.txt
 python main.py
 ```
 
-All bundled tools (`iverilog`, `gtkwave`, `graphviz`) are already included under `tools/`.
-No additional PATH configuration needed.
+The tools (`iverilog`, `gtkwave`, `graphviz`) are expected in `tools/` but are **not** distributed in the repository due to their size. Each user must place their own copies there. See `docs/install.html` for setup instructions.
 
 ## Packaging as a standalone executable
 
-Use PyInstaller to create a single `.exe`:
+Use PyInstaller with the provided spec file:
 
 ```bash
 pip install pyinstaller
-pyinstaller --name HDLStudio --windowed --add-data "tools;tools" main.py
+pyinstaller --clean HDLStudio.spec
 ```
+
+The output appears in `dist/HDLStudio/`. A standalone installer can be built with Inno Setup
+using `installer.iss` (requires Inno Setup 6+).
 
 **Note:** Verilator requires WSL2 and cannot be bundled — it remains an optional
 runtime dependency for users who install WSL separately.
