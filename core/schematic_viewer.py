@@ -167,7 +167,8 @@ class _SvgDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def _fit(self):
-        self.svg_widget.setFixedSize(self.svg_widget.sizeHint())
+        self.svg_widget.setMinimumSize(0, 0)
+        self.svg_widget.setMaximumSize(16777215, 16777215)
 
 
 class _DotFallbackDialog(QDialog):

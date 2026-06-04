@@ -13,6 +13,8 @@ class MainToolBar(QToolBar):
         self.setIconSize(parent.iconSize())
 
         self.main = parent
+        self._user_selected_module = False
+        self._user_selected_tb = False
         self._build()
 
     def _build(self):
@@ -35,6 +37,7 @@ class MainToolBar(QToolBar):
         self.addAction(a.synthesize)
         self.addAction(a.place_and_route)
         self.addAction(a.view_waves)
+
         self.addSeparator()
 
         mod_label = QLabel("Module:")
@@ -48,7 +51,7 @@ class MainToolBar(QToolBar):
         self.module_combo.currentIndexChanged.connect(self._on_module_changed)
         self.addWidget(self.module_combo)
 
-        tb_label = QLabel("Testbench:")
+        tb_label = QLabel("TB:")
         tb_label.setStyleSheet("color: #aaaaaa; padding-left: 4px;")
         self.addWidget(tb_label)
 
@@ -59,7 +62,7 @@ class MainToolBar(QToolBar):
         self.tb_combo.currentIndexChanged.connect(self._on_tb_changed)
         self.addWidget(self.tb_combo)
 
-        sim_label = QLabel("Simulator:")
+        sim_label = QLabel("Sim:")
         sim_label.setStyleSheet("color: #aaaaaa; padding-left: 4px;")
         self.addWidget(sim_label)
 
@@ -88,19 +91,24 @@ class MainToolBar(QToolBar):
     def _on_module_changed(self, index):
         path = self.module_combo.itemData(index)
         self.main.build_system.module_file = path
+        self._user_selected_module = True
 
     def _on_tb_changed(self, index):
         path = self.tb_combo.itemData(index)
         self.main.build_system.testbench_file = path
+        self._user_selected_tb = True
 
     def _on_simulator_changed(self, index):
         sim = self.sim_combo.itemData(index)
         self.main.build_system.simulator = sim
 
-    def refresh_file_lists(self):
+    def populate(self, initial=False):
         self.module_combo.blockSignals(True)
         self.tb_combo.blockSignals(True)
         self.sim_combo.blockSignals(True)
+
+        prev_module = self.module_combo.currentData()
+        prev_tb = self.tb_combo.currentData()
 
         self.module_combo.clear()
         self.tb_combo.clear()
@@ -120,23 +128,28 @@ class MainToolBar(QToolBar):
             self.module_combo.addItem(rel, f)
             self.tb_combo.addItem(rel, f)
 
-        idx_module = 0
-        idx_tb = 0
+        if initial:
+            bs.auto_select_files()
+            self._user_selected_module = False
+            self._user_selected_tb = False
 
-        if bs.module_file:
-            for i in range(self.module_combo.count()):
-                if self.module_combo.itemData(i) == bs.module_file:
-                    idx_module = i
-                    break
+        if self._user_selected_module and prev_module:
+            idx = self.module_combo.findData(prev_module)
+            self.module_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        elif bs.module_file:
+            idx = self.module_combo.findData(bs.module_file)
+            self.module_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        else:
+            self.module_combo.setCurrentIndex(0)
 
-        if bs.testbench_file:
-            for i in range(self.tb_combo.count()):
-                if self.tb_combo.itemData(i) == bs.testbench_file:
-                    idx_tb = i
-                    break
-
-        self.module_combo.setCurrentIndex(idx_module)
-        self.tb_combo.setCurrentIndex(idx_tb)
+        if self._user_selected_tb and prev_tb:
+            idx = self.tb_combo.findData(prev_tb)
+            self.tb_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        elif bs.testbench_file:
+            idx = self.tb_combo.findData(bs.testbench_file)
+            self.tb_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        else:
+            self.tb_combo.setCurrentIndex(0)
 
         idx_sim = self.sim_combo.findData(bs.simulator)
         if idx_sim >= 0:
@@ -145,3 +158,7 @@ class MainToolBar(QToolBar):
         self.module_combo.blockSignals(False)
         self.tb_combo.blockSignals(False)
         self.sim_combo.blockSignals(False)
+
+    def reset_auto_select(self):
+        self._user_selected_module = False
+        self._user_selected_tb = False

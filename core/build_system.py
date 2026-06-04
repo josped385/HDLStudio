@@ -480,12 +480,6 @@ class BuildSystem:
         src_name = os.path.basename(filepath)
         base = os.path.splitext(src_name)[0]
 
-        if output_path is None:
-            out_dir = tempfile.mkdtemp(prefix="yosys_")
-        else:
-            out_dir = os.path.dirname(output_path)
-            os.makedirs(out_dir, exist_ok=True)
-
         out_ext = os.path.splitext(output_path)[1].lower() if output_path else ".blif"
 
         if synth_script is None:
@@ -511,11 +505,11 @@ class BuildSystem:
                 terminal_callback(f"Yosys error: {e}\n")
                 os.chdir(orig_cwd)
                 return False
-
-            os.chdir(orig_cwd)
+            finally:
+                os.chdir(orig_cwd)
 
             out_file = os.path.join(work_dir, out_name)
-            if os.path.isfile(out_file):
+            if os.path.isfile(out_file) and os.path.getsize(out_file) > 0:
                 if output_path:
                     shutil.copy2(out_file, output_path)
                     terminal_callback(f"\nSynthesis output saved: {output_path}\n")
@@ -525,12 +519,15 @@ class BuildSystem:
                         terminal_callback(f.read())
                 return True
             else:
-                # Check for other output formats
-                for f in os.listdir(work_dir):
-                    if f != src_name:
-                        terminal_callback(f"\nOutput file: {f}\n")
-                        with open(os.path.join(work_dir, f)) as fh:
-                            terminal_callback(fh.read())
-                return True
+                # Check for other files yosys may have left
+                remaining = [f for f in os.listdir(work_dir) if f != src_name]
+                if remaining:
+                    terminal_callback("\nYosys produced unexpected output:\n")
+                    for f in remaining:
+                        terminal_callback(f"  {f}\n")
+                terminal_callback("\n✗ Synthesis failed — no output file was generated.\n")
+                terminal_callback("  This usually means the design uses constructs Yosys cannot\n")
+                terminal_callback("  synthesize (e.g. real/analog types, unsupported system calls).\n")
+                return False
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)

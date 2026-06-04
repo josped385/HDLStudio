@@ -78,6 +78,9 @@ class FileExplorer(QTreeView):
             synth_action = menu.addAction(self._icon("synthesize"), "Synthesize")
             show_sch_action = menu.addAction(self._icon("synthesize"), "Show Schematic")
             pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
+        elif ext == ".blif":
+            show_sch_action = menu.addAction(self._icon("synthesize"), "Show Schematic")
+            pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
         elif ext == ".json":
             pnr_action = menu.addAction(self._icon("pnr"), "Place & Route")
         elif ext == ".vvp":

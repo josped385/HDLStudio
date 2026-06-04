@@ -44,7 +44,8 @@ class MainWindow(QMainWindow):
 
         self.project = Project()
         self.build_system = BuildSystem(self.project)
-        self.wave_viewer = WaveViewer()
+        self.wave_viewer = WaveViewer(self)
+        self.wave_viewer.error_occurred.connect(self._on_wave_error)
         self.hover_db = HoverDatabase()
         self._last_synthesis_blif = None
         self._last_synthesis_json = None
@@ -286,7 +287,7 @@ class MainWindow(QMainWindow):
 
     # ---------------- FILE CONTEXT ----------------
 
-    def _refresh_build_context(self, filepath=None):
+    def _refresh_build_context(self, filepath=None, initial=False):
 
         if not filepath:
             tab = self.editor_tabs.current_tab()
@@ -301,8 +302,7 @@ class MainWindow(QMainWindow):
         else:
             self.build_system.project = None
 
-        self.build_system.auto_select_files()
-        self.toolbar.refresh_file_lists()
+        self.toolbar.populate(initial=initial)
         self.signal_dock.update_from_file(filepath)
         self.hierarchy_dock.update_from_file(filepath)
 
@@ -321,13 +321,13 @@ class MainWindow(QMainWindow):
             return
 
         self.editor_tabs.open_file(path)
-        self._refresh_build_context(path)
+        self._refresh_build_context(path, initial=True)
         self.bottom_panel.append_history(f"Opened file: {os.path.basename(path)}")
 
     def open_project_file(self, path):
 
         self.editor_tabs.open_file(path)
-        self._refresh_build_context(path)
+        self._refresh_build_context(path, initial=True)
         self.bottom_panel.append_history(f"Opened file: {os.path.basename(path)}")
 
     def _parse_and_mark_errors(self, raw_output):
@@ -515,7 +515,7 @@ class MainWindow(QMainWindow):
         )
 
         self._index_project_files()
-        self._refresh_build_context()
+        self._refresh_build_context(initial=True)
         self.status.showMessage(f"Project loaded: {self.project.name}")
 
     def _index_project_files(self):
@@ -708,6 +708,12 @@ class MainWindow(QMainWindow):
         else:
             self.status.showMessage("Failed to launch GTKWave")
 
+    def _on_wave_error(self, msg):
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_error(f"GTKWave error:\n{msg}\n")
+        self.status.showMessage("GTKWave reported an error — see terminal")
+
     def toggle_terminal(self):
 
         visible = self.bottom_panel.isVisible()
@@ -764,6 +770,9 @@ class MainWindow(QMainWindow):
             os.path.splitext(os.path.basename(path))[0] + ".blif",
             "BLIF (*.blif);;Verilog (*.v);;EDIF (*.edif);;JSON (*.json);;All Files (*)"
         )
+
+        if not out_path:
+            return
 
         self.bottom_panel.clear_console()
         self.bottom_panel.tabs.setCurrentIndex(0)
