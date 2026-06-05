@@ -47,6 +47,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+See the full documentation at **https://josped385.github.io/HDLStudio/** for setup, usage, and API reference.
+
 The tools (`iverilog`, `gtkwave`, `graphviz`) are expected in `tools/` but are **not** distributed in the repository due to their size. Each user must place their own copies there. See `docs/install.html` for setup instructions.
 
 ## Packaging as a standalone executable
@@ -71,3 +73,7 @@ GPL v3 — see [LICENSE](LICENSE).
 ## Author
 
 José Pedro Granado Olmo — [@josped385](https://github.com/josped385)
+
+## Documentation
+
+Full documentation is available at **https://josped385.github.io/HDLStudio/**
