@@ -13,7 +13,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra64
 SolidCompression=yes
 OutputDir=installer
-OutputBaseFilename=HDLStudio_Setup
+OutputBaseFilename=HDLStudio_Setup_v{#MyAppVersion}
 PrivilegesRequired=admin
 
 [Languages]

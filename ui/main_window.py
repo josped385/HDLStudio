@@ -1,7 +1,8 @@
+import sys
 import os
 import re
 
-from PyQt6.QtCore import Qt, QSize, QEvent
+from PyQt6.QtCore import QSize, Qt, QEvent
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
 
@@ -35,7 +36,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("HDLStudio")
         self.resize(1400, 900)
 
-        self.setWindowIcon(QIcon("assets/icons/app_icon.png"))
+        if getattr(sys, 'frozen', False):
+            _root = sys._MEIPASS
+        else:
+            _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.setWindowIcon(QIcon(os.path.join(_root, "assets", "icons", "app_icon.png")))
         self.setIconSize(QSize(20, 20))
 
         self.setStyleSheet(MAIN_STYLE)
@@ -306,6 +311,14 @@ class MainWindow(QMainWindow):
         self.signal_dock.update_from_file(filepath)
         self.hierarchy_dock.update_from_file(filepath)
 
+    def _default_dialog_dir(self):
+        if self.project and self.project.is_loaded():
+            return self.project.root_path
+        tab = self.editor_tabs.current_tab()
+        if tab and tab.path:
+            return os.path.dirname(tab.path)
+        return ""
+
     # ---------------- ACTIONS ----------------
 
     def open_file(self):
@@ -313,7 +326,7 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            "",
+            self._default_dialog_dir(),
             "HDL Files (*.vhd *.v *.sv);;All Files (*)"
         )
 
@@ -364,19 +377,17 @@ class MainWindow(QMainWindow):
         bs = self.build_system
         base = os.path.splitext(os.path.basename(path))[0]
         if bs.simulator == bs.SIM_VERILATOR:
-            default = f"build/{base}_vlsim"
             vvp_path, _ = QFileDialog.getSaveFileName(
                 self, f"Compile {os.path.basename(path)} with Verilator",
-                default,
+                os.path.join(self._default_dialog_dir(), "build", f"{base}_vlsim"),
                 "All Files (*)"
             )
             if not vvp_path:
                 return
         else:
-            default = f"build/{base}.vvp"
             vvp_path, _ = QFileDialog.getSaveFileName(
                 self, f"Compile {os.path.basename(path)}",
-                default,
+                os.path.join(self._default_dialog_dir(), "build", f"{base}.vvp"),
                 "VVP files (*.vvp);;All Files (*)"
             )
             if not vvp_path:
@@ -414,7 +425,7 @@ class MainWindow(QMainWindow):
 
         vcd_path, _ = QFileDialog.getSaveFileName(
             self, f"Run {os.path.basename(path)}",
-            "waves.vcd",
+            os.path.join(self._default_dialog_dir(), "waves.vcd"),
             "VCD files (*.vcd);;FST files (*.fst);;All Files (*)"
         )
         if not vcd_path:
@@ -486,7 +497,7 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Save As",
-            "",
+            self._default_dialog_dir(),
             "HDL Files (*.vhd *.v *.sv);;All Files (*)"
         )
 
@@ -602,7 +613,7 @@ class MainWindow(QMainWindow):
         if bs.simulator == bs.SIM_VERILATOR:
             path, _ = QFileDialog.getSaveFileName(
                 self, "Save Verilator simulation as",
-                "build/simulation_vlsim",
+                os.path.join(self._default_dialog_dir(), "build", "simulation_vlsim"),
                 "All Files (*)"
             )
             if not path:
@@ -610,7 +621,7 @@ class MainWindow(QMainWindow):
         else:
             path, _ = QFileDialog.getSaveFileName(
                 self, "Save compiled simulation as",
-                "build/simulation.vvp",
+                os.path.join(self._default_dialog_dir(), "build", "simulation.vvp"),
                 "VVP files (*.vvp);;All Files (*)"
             )
             if not path:
@@ -647,7 +658,7 @@ class MainWindow(QMainWindow):
         else:
             sim_path, _ = QFileDialog.getOpenFileName(
                 self, "Select simulation to run",
-                "build/",
+                os.path.join(self._default_dialog_dir(), "build"),
                 "VVP files (*.vvp);;All Files (*)"
             )
             if not sim_path:
@@ -655,7 +666,7 @@ class MainWindow(QMainWindow):
 
         vcd_path, _ = QFileDialog.getSaveFileName(
             self, "Save waveform as",
-            "waves.vcd",
+            os.path.join(self._default_dialog_dir(), "waves.vcd"),
             "VCD files (*.vcd);;FST files (*.fst);;All Files (*)"
         )
         if not vcd_path:
@@ -697,7 +708,7 @@ class MainWindow(QMainWindow):
 
         vcd, _ = QFileDialog.getOpenFileName(
             self, "Open waveform",
-            "",
+            self._default_dialog_dir(),
             "Waveform files (*.vcd *.fst *.lxt *.lxt2 *.ghw);;All Files (*)"
         )
         if not vcd:
@@ -726,7 +737,7 @@ class MainWindow(QMainWindow):
             # Called from Tools menu — show file dialog
             path, _ = QFileDialog.getOpenFileName(
                 self, "Select HDL file for testbench",
-                "",
+                self._default_dialog_dir(),
                 "HDL Files (*.v *.sv *.vhd *.vhdl);;All Files (*)"
             )
             if not path:
@@ -752,7 +763,7 @@ class MainWindow(QMainWindow):
         if path is None:
             path, _ = QFileDialog.getOpenFileName(
                 self, "Select HDL file to synthesize",
-                "",
+                self._default_dialog_dir(),
                 "HDL Files (*.v *.sv *.vhd *.vhdl);;All Files (*)"
             )
             if not path:
@@ -768,7 +779,7 @@ class MainWindow(QMainWindow):
 
         out_path, _ = QFileDialog.getSaveFileName(
             self, "Save synthesis output",
-            os.path.splitext(os.path.basename(path))[0] + ".blif",
+            os.path.join(self._default_dialog_dir(), os.path.splitext(os.path.basename(path))[0] + ".blif"),
             "BLIF (*.blif);;Verilog (*.v);;EDIF (*.edif);;JSON (*.json);;All Files (*)"
         )
 
@@ -854,7 +865,7 @@ class MainWindow(QMainWindow):
         if not target:
             target, _ = QFileDialog.getOpenFileName(
                 self, "Select HDL or BLIF file for schematic",
-                "",
+                self._default_dialog_dir(),
                 "HDL/BLIF Files (*.v *.sv *.vhd *.vhdl *.blif);;All Files (*)"
             )
             if not target:
@@ -882,7 +893,7 @@ class MainWindow(QMainWindow):
             else:
                 path, _ = QFileDialog.getOpenFileName(
                     self, "Select synthesized JSON for PnR",
-                    "",
+                    self._default_dialog_dir(),
                     "JSON Files (*.json);;All Files (*)"
                 )
                 if not path:
@@ -897,7 +908,7 @@ class MainWindow(QMainWindow):
         default_asc = os.path.splitext(os.path.basename(path))[0] + ".asc"
         asc_path, _ = QFileDialog.getSaveFileName(
             self, "Save PnR output",
-            default_asc,
+            os.path.join(self._default_dialog_dir(), default_asc),
             "ASC (*.asc);;All Files (*)"
         )
         if not asc_path:

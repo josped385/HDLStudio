@@ -47,7 +47,7 @@ class MainToolBar(QToolBar):
         self.module_combo = QComboBox()
         self.module_combo.setMinimumWidth(120)
         self.module_combo.setMaximumWidth(180)
-        self.module_combo.setPlaceholderText("(auto)")
+        self.module_combo.setPlaceholderText("Select module")
         self.module_combo.currentIndexChanged.connect(self._on_module_changed)
         self.addWidget(self.module_combo)
 
@@ -58,7 +58,7 @@ class MainToolBar(QToolBar):
         self.tb_combo = QComboBox()
         self.tb_combo.setMinimumWidth(120)
         self.tb_combo.setMaximumWidth(180)
-        self.tb_combo.setPlaceholderText("(auto)")
+        self.tb_combo.setPlaceholderText("Select testbench")
         self.tb_combo.currentIndexChanged.connect(self._on_tb_changed)
         self.addWidget(self.tb_combo)
 
@@ -113,8 +113,8 @@ class MainToolBar(QToolBar):
         self.module_combo.clear()
         self.tb_combo.clear()
 
-        self.module_combo.addItem("(auto detect)", None)
-        self.tb_combo.addItem("(auto detect)", None)
+        self.module_combo.addItem("Select module", None)
+        self.tb_combo.addItem("Select testbench", None)
 
         bs = self.main.build_system
         files = bs.collect_hdl_files()
@@ -129,24 +129,19 @@ class MainToolBar(QToolBar):
             self.tb_combo.addItem(rel, f)
 
         if initial:
-            bs.auto_select_files()
             self._user_selected_module = False
             self._user_selected_tb = False
+            bs.module_file = None
+            bs.testbench_file = None
 
         if self._user_selected_module and prev_module:
             idx = self.module_combo.findData(prev_module)
-            self.module_combo.setCurrentIndex(idx if idx >= 0 else 0)
-        elif bs.module_file:
-            idx = self.module_combo.findData(bs.module_file)
             self.module_combo.setCurrentIndex(idx if idx >= 0 else 0)
         else:
             self.module_combo.setCurrentIndex(0)
 
         if self._user_selected_tb and prev_tb:
             idx = self.tb_combo.findData(prev_tb)
-            self.tb_combo.setCurrentIndex(idx if idx >= 0 else 0)
-        elif bs.testbench_file:
-            idx = self.tb_combo.findData(bs.testbench_file)
             self.tb_combo.setCurrentIndex(idx if idx >= 0 else 0)
         else:
             self.tb_combo.setCurrentIndex(0)
