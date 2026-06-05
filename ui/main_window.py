@@ -452,6 +452,7 @@ class MainWindow(QMainWindow):
         ok = self.wave_viewer.open(path)
         if ok:
             self.status.showMessage(f"GTKWave: {os.path.basename(path)}")
+            self.bottom_panel.append_history(f"Opened waveform: {os.path.basename(path)}")
         else:
             self.status.showMessage("Failed to launch GTKWave")
 
@@ -786,6 +787,7 @@ class MainWindow(QMainWindow):
             if ok:
                 self.bottom_panel.write_ok("Synthesis complete")
                 self.status.showMessage("Synthesis complete")
+                self.bottom_panel.append_history(f"Synthesized {os.path.basename(path)}")
                 if out_path and os.path.isfile(out_path):
                     out_lower = out_path.lower()
                     if out_lower.endswith(".json"):
@@ -916,6 +918,7 @@ class MainWindow(QMainWindow):
             if asc_path_result:
                 self.bottom_panel.write_ok("Place & Route complete")
                 self.status.showMessage("Place & Route complete")
+                self.bottom_panel.append_history(f"Place & Route: {os.path.basename(path)}")
                 if report_info:
                     self._show_pnr_report(report_info)
             else:

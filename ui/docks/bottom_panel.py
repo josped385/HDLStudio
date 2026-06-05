@@ -104,6 +104,11 @@ class BottomPanel(QDockWidget):
         except Exception as e:
             self.console.append(f"[display error: {e}]")
 
+    def _write_both(self, text):
+        """Write plain text to both Console and Log tabs."""
+        self._append_html(f"{_escape(text)}<br>")
+        self.append_log(text + "\n")
+
     def write_header(self, title):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
         h = (
@@ -113,41 +118,48 @@ class BottomPanel(QDockWidget):
             f'<span style="color:#888;">{"═" * 50}</span><br><br>'
         )
         self._append_html(h)
+        self.append_log(f"\n{'=' * 50}\n{title}\n{ts}\n{'=' * 50}\n")
 
     def write_cmd(self, text):
         self._append_html(
             f'<span style="color:#888;font-family:Consolas,monospace;">'
             f'$ {text}</span><br>'
         )
+        self.append_log(f"$ {text}\n")
 
     def write_info(self, text):
         self._append_html(
             f'<span style="color:#ccc;">{text}</span><br>'
         )
+        self.append_log(f"{text}\n")
 
     def write_ok(self, text):
         self._append_html(
             f'<span style="color:#4ec9b0;font-weight:bold;">'
             f'✔  {text}</span><br>'
         )
+        self.append_log(f"[OK] {text}\n")
 
     def write_error(self, text):
         self._append_html(
             f'<span style="color:#f44747;font-weight:bold;">'
             f'✖  {text}</span><br>'
         )
+        self.append_log(f"[ERROR] {text}\n")
 
     def write_warning(self, text):
         self._append_html(
             f'<span style="color:#dcdcaa;">'
             f'⚠  {text}</span><br>'
         )
+        self.append_log(f"[WARN] {text}\n")
 
     def write_line(self, text, color=None):
         if color:
             self._append_html(f'<span style="color:{color};">{text}</span><br>')
         else:
             self._append_html(f'<span>{text}</span><br>')
+        self.append_log(f"{text}\n")
 
     def write_raw(self, text):
         try:
