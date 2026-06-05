@@ -793,7 +793,8 @@ class MainWindow(QMainWindow):
                         self.bottom_panel.write_raw("Use Place & Route (Ctrl+Shift+P) to run PnR on this design.\n")
                     else:
                         self._last_synthesis_blif = out_path
-                        self.bottom_panel.write_raw("Use Show Schematic (Ctrl+Shift+D) to view the gate-level schematic.\n")
+                        self.bottom_panel.write_raw("Opening gate-level schematic...\n")
+                        self._show_schematic(out_path)
             else:
                 self.bottom_panel.write_error("Synthesis failed")
                 self.status.showMessage("Synthesis failed")

@@ -21,9 +21,9 @@ A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL su
 | Component   | Required | Notes                                                  |
 |-------------|----------|--------------------------------------------------------|
 | Python      | Yes      | >= 3.13                                                |
-| Icarus      | Yes      | Local copy in `tools/iverilog/` (not in repo)          |
-| GTKWave     | Yes      | Local copy in `tools/gtkwave/` (not in repo)           |
-| Graphviz    | Yes      | Local copy in `tools/graphviz/` (not in repo)          |
+| Icarus      | Yes      | Place `iverilog.exe` in `tools/iverilog/` locally      |
+| GTKWave     | Yes      | Place `gtkwave.exe` in `tools/gtkwave/` locally        |
+| Graphviz    | Yes      | Place `dot.exe` in `tools/graphviz/` locally           |
 | Yosys       | Yes      | Installed via pip (`yowasp-yosys`)                      |
 | nextpnr     | Optional | Installed via pip (`yowasp-nextpnr-ice40`)              |
 | Verilator   | Optional | Via WSL2 with Ubuntu (see below)                        |
