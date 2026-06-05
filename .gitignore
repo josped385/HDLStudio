@@ -54,7 +54,10 @@ tools/
 *.asc
 ivl_vhdl_work/
 
-# Examples generated files
+# Examples (local only)
+examples/
+
+# Examples generated files (legacy)
 examples/*/*.vvp
 examples/*/*.vcd
 examples/*/*.blif
