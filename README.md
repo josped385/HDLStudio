@@ -1,6 +1,8 @@
 # HDLStudio
 
-A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL support.
+[![Download](https://img.shields.io/badge/Download-v0.1.0-brightgreen)](https://github.com/josped385/HDLStudio/releases/tag/v0.1.0)
+
+A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL support — 100% generated with AI.
 
 ## Features
 
@@ -40,16 +42,27 @@ To use Verilator as the simulation backend:
 
 ## Quick start
 
+### Download the installer (recommended)
+
+Grab the latest release from the [Releases page](https://github.com/josped385/HDLStudio/releases/tag/v0.1.0):
+
+- **`HDLStudio_Setup_v0.1.0.exe`** (~100 MB) — standalone installer, no external dependencies.
+
+Run the installer and launch HDLStudio from the Start Menu or desktop shortcut.
+
+### Run from source
+
 ```bash
 git clone https://github.com/josped385/hdlstudio.git
 cd hdlstudio
 pip install -r requirements.txt
+pip install yowasp-yosys yowasp-nextpnr-ice40
 python main.py
 ```
 
-See the full documentation at **https://josped385.github.io/HDLStudio/** for setup, usage, and API reference.
+**Note:** Icarus Verilog, GTKWave and Graphviz must be placed in `tools/` locally when running from source. The standalone installer bundles them automatically.
 
-The tools (`iverilog`, `gtkwave`, `graphviz`) are expected in `tools/` but are **not** distributed in the repository due to their size. Each user must place their own copies there. See `docs/install.html` for setup instructions.
+See the full documentation at **https://josped385.github.io/HDLStudio/** for setup, usage, and API reference.
 
 ## Packaging as a standalone executable
 
