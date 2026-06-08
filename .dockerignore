@@ -1,0 +1,17 @@
+.git/
+.gitignore
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+build/
+dist/
+installer/
+tools/
+*.exe
+*.msi
+*.log
+.env
+.DS_Store
+Thumbs.db

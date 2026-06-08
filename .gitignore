@@ -70,3 +70,6 @@ temp/
 # Inno Setup
 installer/
 HDLStudio.spec
+
+# Docker
+projects/

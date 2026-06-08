@@ -81,6 +81,14 @@
 
     <h2>Quick Start</h2>
     <div class="alert info">All bundled tools are included. No separate downloads needed for basic use.</div>
+    <p><strong>Option 1:</strong> <a href="install.html">Download the installer</a> (Windows).</p>
+    <p><strong>Option 2:</strong> Run with Docker (Linux):</p>
+    <pre><code class="lang-tag">bash</code>docker pull josped385/hdlstudio:latest
+docker run --rm -it --network host \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  josped385/hdlstudio:latest</pre>
+    <p><strong>Option 3:</strong> Run from source:</p>
     <pre><code class="lang-tag">bash</code>git clone https://github.com/josped385/HDLStudio.git
 cd HDLStudio
 pip install -r requirements.txt

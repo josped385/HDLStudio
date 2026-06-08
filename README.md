@@ -1,6 +1,7 @@
 # HDLStudio
 
 [![Download](https://img.shields.io/badge/Download-v0.1.0-brightgreen)](https://github.com/josped385/HDLStudio/releases/tag/v0.1.0)
+[![Docker](https://img.shields.io/badge/Docker-josped385/hdlstudio-2496ED?logo=docker)](https://hub.docker.com/r/josped385/hdlstudio)
 
 A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL support — 100% generated with AI.
 
@@ -49,6 +50,19 @@ Grab the latest release from the [Releases page](https://github.com/josped385/HD
 - **`HDLStudio_Setup_v0.1.0.exe`** (~100 MB) — standalone installer, no external dependencies.
 
 Run the installer and launch HDLStudio from the Start Menu or desktop shortcut.
+
+### Run with Docker
+
+HDLStudio is also available as a Docker image for Linux environments:
+
+```bash
+docker pull josped385/hdlstudio:latest
+docker run --rm -it --network host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix josped385/hdlstudio:latest
+```
+
+Requires an X11 server on the host. On Windows, use WSLg or VcXsrv.
+
+See the [Dockerfile](Dockerfile) for details.
 
 ### Run from source
 

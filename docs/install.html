@@ -101,6 +101,17 @@ sudo make install</pre></li>
     </ol>
     <p>HDLStudio detects Verilator automatically by running <code>wsl verilator --version</code>. Select "Verilator" from the simulator dropdown in the toolbar.</p>
 
+    <h2>Docker</h2>
+    <p>HDLStudio is available as a Docker image for Linux environments. All EDA tools (Icarus Verilog, GTKWave, Graphviz, Verilator, Yosys, nextpnr-ice40) are pre-installed.</p>
+    <pre><code class="lang-tag">bash</code>docker pull josped385/hdlstudio:latest
+docker run --rm -it --network host \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v $PWD/projects:/projects \
+  josped385/hdlstudio:latest</pre>
+    <p>An X11 server is required on the host. On <strong>Windows</strong>, use WSLg (Windows 11) or install <a href="https://sourceforge.net/projects/vcxsrv/">VcXsrv</a> and set <code>DISPLAY=host.docker.internal:0.0</code>.</p>
+    <p>Source: <a href="https://github.com/josped385/HDLStudio/blob/main/Dockerfile">Dockerfile</a> &middot; Image: <a href="https://hub.docker.com/r/josped385/hdlstudio">josped385/hdlstudio</a></p>
+
     <h2>Optional: PyInstaller Build</h2>
     <p>To package HDLStudio into a standalone <code>.exe</code>:</p>
     <pre><code class="lang-tag">bash</code>pip install pyinstaller

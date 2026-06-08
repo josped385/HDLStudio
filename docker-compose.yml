@@ -1,0 +1,13 @@
+services:
+  hdlstudio:
+    image: josped385/hdlstudio:latest
+    build: .
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_QPA_PLATFORM=xcb
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ./projects:/projects
+    working_dir: /projects
