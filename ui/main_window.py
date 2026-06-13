@@ -4,7 +4,7 @@ import re
 
 from PyQt6.QtCore import QSize, Qt, QEvent
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
-from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication
+from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication, QDialog
 
 from ui.docks.file_explorer_dock import FileExplorerDock
 from ui.docks.git_dock import GitDock
@@ -12,6 +12,7 @@ from ui.docks.hierarchy_dock import HierarchyDock
 from ui.docks.signal_dock import SignalDock
 from ui.docks.bottom_panel import BottomPanel
 from ui.docks.template_dock import TemplateDock
+from ui.docks.debug_dock import DebugDock
 from ui.editor_tabs import EditorTabs
 from ui.panels.status_bar import IDEStatusBar
 from ui.toolbar import MainToolBar
@@ -78,6 +79,7 @@ class MainWindow(QMainWindow):
         self._setup_hierarchy()
         self._setup_git()
         self._setup_terminal()
+        self._setup_debug_dock()
         self._setup_status_bar()
 
     # ---------------- MENU ----------------
@@ -245,6 +247,19 @@ class MainWindow(QMainWindow):
         )
 
         self.git_dock.hide()
+
+    # ---------------- DEBUG DOCK ----------------
+
+    def _setup_debug_dock(self):
+
+        self.debug_dock = DebugDock(self)
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.debug_dock
+        )
+
+        self.debug_dock.hide()
 
     # ---------------- TERMINAL ----------------
 
@@ -698,6 +713,237 @@ class MainWindow(QMainWindow):
             "Simulation finished" if ok else "Simulation failed"
         )
 
+    def debug_project(self):
+
+        try:
+            self._debug_project_impl()
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            self.bottom_panel.clear_console()
+            self.bottom_panel.tabs.setCurrentIndex(0)
+            self.bottom_panel.write_error(f"Debug error: {e}")
+            for line in tb.split("\n"):
+                self.bottom_panel.write_raw(line + "\n")
+            self.status.showMessage("Debug: error — see console")
+            self.bottom_panel.append_history("Debug: error")
+
+    def _debug_project_impl(self):
+
+        from ui.debug_dialog import DebugDialog
+        bs = self.build_system
+        default_sim_name = "simulation_vlsim" if bs.simulator == bs.SIM_VERILATOR else "simulation.vvp"
+        default_sim = os.path.join(self._default_dialog_dir(), "build", default_sim_name)
+        dlg = DebugDialog(
+            default_dir=self._default_dialog_dir(),
+            default_sim_path=default_sim,
+            parent=self
+        )
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        mode = dlg.mode()
+        vcd_out = dlg.vcd_path()
+        sim_out = dlg.sim_path()
+
+        self._ensure_files_saved()
+        self._refresh_build_context()
+
+        bs = self.build_system
+        root = bs.root_dir or self._default_dialog_dir()
+        build_dir = os.path.dirname(sim_out) or os.path.join(root, "build")
+        os.makedirs(build_dir, exist_ok=True)
+
+        self.status.showMessage("Debug: Compiling...")
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header(f"DEBUG ({mode.upper()}) — COMPILE")
+
+        def write(text):
+            self.bottom_panel.write_raw(text)
+
+        ok = bs.compile(write, output_path=sim_out)
+        if not ok:
+            self.bottom_panel.write_error("Compilation failed — aborting debug")
+            self.bottom_panel.append_history("Debug: compile failed")
+            self.status.showMessage("Debug: compilation failed")
+            return
+
+        self.bottom_panel.write_ok("Compilation OK — starting simulation")
+        self.bottom_panel.write_header("DEBUG — RUN")
+
+        ok = bs.run(write, sim_path=None if bs.simulator == bs.SIM_VERILATOR else sim_out)
+        self.bottom_panel.append_history("Debug: ran simulation")
+
+        if not ok:
+            self.bottom_panel.write_error("Simulation failed")
+            self.status.showMessage("Debug: simulation failed")
+            self.bottom_panel.append_history("Debug finished (failed)")
+            return
+
+        generated = bs.last_vcd_path
+        if generated and os.path.isfile(generated):
+            try:
+                if os.path.normpath(generated) != os.path.normpath(vcd_out):
+                    os.replace(generated, vcd_out)
+                bs.last_vcd_path = vcd_out
+                write(f"\n>> Waveform saved: {vcd_out}\n")
+            except OSError as e:
+                write(f"\n>> Could not rename waveform: {e}\n")
+
+        if mode == DebugDialog.MODE_STEP:
+            self._start_step_debug(vcd_out, dlg.step_size_ns(), dlg.max_time_ns())
+        else:
+            self._open_gtkwave(vcd_out)
+
+        self.bottom_panel.append_history("Debug finished")
+
+    def _open_gtkwave(self, vcd_path):
+        if not vcd_path or not os.path.isfile(vcd_path):
+            self.status.showMessage("No waveform file to open")
+            return
+        if self.wave_viewer.available:
+            self.wave_viewer.open(vcd_path)
+            self.bottom_panel.write_ok("GTKWave launched")
+            self.status.showMessage("Debug: GTKWave opened")
+        else:
+            self.bottom_panel.write_info("GTKWave not available — press F7 to view waves manually")
+            self.status.showMessage("Debug: done (no GTKWave)")
+
+    def _start_step_debug(self, vcd_path, step_ns, max_time_ns):
+        try:
+            self._start_step_debug_impl(vcd_path, step_ns, max_time_ns)
+        except Exception as e:
+            import traceback
+            self.bottom_panel.write_error(f"Step debug error: {e}")
+            for line in traceback.format_exc().split("\n"):
+                self.bottom_panel.write_raw(line + "\n")
+            self.status.showMessage("Debug: step init error")
+
+    def _start_step_debug_impl(self, vcd_path, step_ns, max_time_ns):
+
+        from core.vcd_parser import VCDParser
+        self._debug_vcd = vcd_path
+        self._debug_step_ns = step_ns
+        self._debug_parser = VCDParser(vcd_path)
+        self._debug_parser.parse()
+        self._debug_time_idx = 0
+        self._debug_tb_file = self.build_system.testbench_file
+        self._debug_tb_delay_lines = []
+        self._debug_max_time = max_time_ns
+
+        if self._debug_tb_file and os.path.isfile(self._debug_tb_file):
+            self._debug_tb_delay_lines = self._parse_delay_lines(self._debug_tb_file)
+
+        if not self._debug_parser.time_values:
+            self.bottom_panel.write_warning("No time points found in VCD — falling back to full mode")
+            self._open_gtkwave(vcd_path)
+            return
+
+        self.toolbar.set_step_controls_visible(True)
+        self.debug_dock.show()
+        self.debug_dock.raise_()
+
+        self.bottom_panel.write_ok(f"VCD parsed: {len(self._debug_parser.time_values)} time points")
+        self.bottom_panel.write_info(f"Timescale: {self._debug_parser.timescale}")
+        self.bottom_panel.write_header("STEP DEBUG — use Step Forward/Back buttons or shortcuts")
+
+        self._open_gtkwave(vcd_path)
+
+        self._step_show_current()
+
+    def _parse_delay_lines(self, tb_path):
+        import re
+        lines = []
+        with open(tb_path, 'r', encoding='utf-8', errors='replace') as f:
+            for i, line in enumerate(f.readlines(), 1):
+                m = re.findall(r'#(\d+)', line)
+                for val in m:
+                    lines.append((int(val), i))
+        return sorted(lines, key=lambda x: x[0])
+
+    def _step_show_current(self):
+
+        parser = self._debug_parser
+        if not parser or not parser.time_values:
+            return
+
+        idx = self._debug_time_idx
+        if idx < 0:
+            idx = 0
+            self._debug_time_idx = 0
+        if idx >= len(parser.time_values):
+            idx = len(parser.time_values) - 1
+            self._debug_time_idx = idx
+
+        t = parser.time_values[idx]
+
+        self.bottom_panel.clear_console()
+        self.bottom_panel.write_header(f"STEP — t={t} {parser.timescale}  ({idx+1}/{len(parser.time_values)})")
+        text = parser.snapshot_text(t, max_signals=30)
+        for line in text.split("\n"):
+            self.bottom_panel.write_raw(line)
+
+        self.debug_dock.update_from_step(
+            parser, t, self._debug_time_idx, len(parser.time_values)
+        )
+
+        self.status.showMessage(f"Debug: t={t} {parser.timescale}")
+
+        tb_file = self._debug_tb_file
+        if not tb_file or not self._debug_tb_delay_lines:
+            return
+
+        closest_line = None
+        for delay, lineno in reversed(self._debug_tb_delay_lines):
+            if delay <= t:
+                closest_line = lineno
+                break
+
+        for tab in self.editor_tabs.tabs.values():
+            path = getattr(tab, 'path', None) or ''
+            if os.path.normpath(path) == os.path.normpath(tb_file):
+                tab.editor.clear_error_markers()
+                if closest_line is not None:
+                    tab.editor.set_error_lines([closest_line - 1])
+                break
+
+    def _step_forward(self):
+        try:
+            parser = self._debug_parser
+            if not parser or not parser.time_values:
+                return
+            if self._debug_time_idx < len(parser.time_values) - 1:
+                self._debug_time_idx += 1
+            self._step_show_current()
+        except Exception as e:
+            self.bottom_panel.write_error(f"Step forward error: {e}")
+
+    def _step_back(self):
+        try:
+            parser = self._debug_parser
+            if not parser or not parser.time_values:
+                return
+            if self._debug_time_idx > 0:
+                self._debug_time_idx -= 1
+            self._step_show_current()
+        except Exception as e:
+            self.bottom_panel.write_error(f"Step back error: {e}")
+
+    def _stop_debug(self):
+        try:
+            self._debug_parser = None
+            self._debug_vcd = None
+            self._debug_time_idx = 0
+            for tab in self.editor_tabs.tabs.values():
+                tab.editor.clear_error_markers()
+            self.toolbar.set_step_controls_visible(False)
+            self.debug_dock.clear_display()
+            self.debug_dock.hide()
+            self.status.showMessage("Debug stopped")
+        except Exception as e:
+            self.bottom_panel.write_error(f"Stop debug error: {e}")
+
     def view_waves(self):
 
         if not self.wave_viewer.available:
@@ -1051,6 +1297,10 @@ class MainWindow(QMainWindow):
             "save_as": self.ide_actions.save_as,
             "compile": self.ide_actions.compile,
             "play": self.ide_actions.run,
+            "debug": self.ide_actions.debug,
+            "backward": self.ide_actions.step_back,
+            "forward": self.ide_actions.step_forward,
+            "stop": self.ide_actions.stop_debug,
             "synthesize": self.ide_actions.synthesize,
             "pnr": self.ide_actions.place_and_route,
             "wave": self.ide_actions.view_waves,
@@ -1083,6 +1333,7 @@ class MainWindow(QMainWindow):
         self.template_dock.apply_theme(colors)
         self.hierarchy_dock.apply_theme(colors)
         self.git_dock.apply_theme(colors)
+        self.debug_dock.apply_theme(colors)
 
         self.editor_tabs._find_bar.apply_theme(colors)
         self.editor_tabs._style_tab_buttons()
@@ -1106,6 +1357,7 @@ class MainWindow(QMainWindow):
             self.template_dock.apply_theme(colors)
             self.hierarchy_dock.apply_theme(colors)
             self.git_dock.apply_theme(colors)
+            self.debug_dock.apply_theme(colors)
             self.editor_tabs._find_bar.apply_theme(colors)
             self.editor_tabs._style_tab_buttons()
             for tab in self.editor_tabs.tabs.values():

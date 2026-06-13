@@ -81,7 +81,23 @@ class MainToolBar(QToolBar):
         )
         self.addWidget(spacer)
 
+        self._step_sep = self.addSeparator()
+        self._step_sep.setVisible(False)
+
+        self.addAction(a.step_back)
+        self.addAction(a.step_forward)
+        self.addAction(a.stop_debug)
+        self._step_actions = [a.step_back, a.step_forward, a.stop_debug]
+        for act in self._step_actions:
+            act.setVisible(False)
+
+        self.addAction(a.debug)
         self.addAction(a.toggle_theme)
+
+    def set_step_controls_visible(self, visible):
+        self._step_sep.setVisible(visible)
+        for act in self._step_actions:
+            act.setVisible(visible)
 
     def apply_theme(self, colors):
         css = f"color: {colors['text_secondary']}; padding-left: 4px;"

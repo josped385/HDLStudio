@@ -36,6 +36,27 @@ class IDEActions:
         self.run = QAction(QIcon(ThemeManager.icon("play")), "Run", main_window)
         self.run.setShortcut(QKeySequence("F6"))
 
+        self.debug = QAction(QIcon(ThemeManager.icon("debug")), "Debug", main_window)
+        self.debug.setShortcut(QKeySequence("F8"))
+        self.debug.setToolTip(
+            "Debug (F8)\n"
+            "Opens a dialog to configure debug mode:\n"
+            "  • Complete — compile, run and open GTKWave\n"
+            "  • Step — advance through time points with testbench line highlighting"
+        )
+
+        self.step_back = QAction("Step Back", main_window)
+        self.step_back.setShortcut(QKeySequence("Ctrl+Shift+Left"))
+        self.step_back.setToolTip("Step Back (Ctrl+Shift+Left)\nGo to previous time point")
+
+        self.step_forward = QAction("Step Forward", main_window)
+        self.step_forward.setShortcut(QKeySequence("Ctrl+Shift+Right"))
+        self.step_forward.setToolTip("Step Forward (Ctrl+Shift+Right)\nGo to next time point")
+
+        self.stop_debug = QAction("Stop Debug", main_window)
+        self.stop_debug.setShortcut(QKeySequence("Shift+F5"))
+        self.stop_debug.setToolTip("Stop Debug (Shift+F5)\nExit step debug mode and clear highlights")
+
         # ---------------- VIEW ----------------
 
         self.toggle_terminal = QAction(QIcon(ThemeManager.icon("terminal")), "Toggle Terminal", main_window)
@@ -80,6 +101,10 @@ class IDEActions:
 
         self.compile.triggered.connect(self.main.compile_project)
         self.run.triggered.connect(self.main.run_project)
+        self.debug.triggered.connect(self.main.debug_project)
+        self.step_forward.triggered.connect(self.main._step_forward)
+        self.step_back.triggered.connect(self.main._step_back)
+        self.stop_debug.triggered.connect(self.main._stop_debug)
 
         self.toggle_terminal.triggered.connect(self.main.toggle_terminal)
         self.toggle_explorer.triggered.connect(self.main.toggle_explorer)

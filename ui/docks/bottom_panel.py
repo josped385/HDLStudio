@@ -267,6 +267,7 @@ class BottomPanel(QDockWidget):
             border: none;
             font-family: Consolas, monospace;
             font-size: 10pt;
+            white-space: pre;
         """
         self.console.setStyleSheet(css_console)
         self.terminal_out.setStyleSheet(css_console)
