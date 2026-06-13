@@ -533,19 +533,19 @@ class CodeEditor(QsciScintilla):
         else:
             self.setWrapMode(QsciScintilla.WrapMode.WrapNone)
 
+    MARKER_ERROR = 24
+
     def set_error_lines(self, line_numbers):
-        INDIC_DEBUG = 8
-        self.SendScintilla(2088, INDIC_DEBUG, 7)
-        self.SendScintilla(2089, INDIC_DEBUG, QColor(255, 255, 0, 160))
-        self.SendScintilla(2092, INDIC_DEBUG)
+        self.clear_error_markers()
+        self.SendScintilla(2352, self.MARKER_ERROR, 22)
+        self.SendScintilla(2354, self.MARKER_ERROR, QColor("#EFFF50"))
         for line in line_numbers:
-            start = self.positionFromLineIndex(line, 0)
-            nxt = self.positionFromLineIndex(line + 1, 0) if line + 1 < self.lines() else self.length()
-            self.SendScintilla(2093, start, nxt - start)
+            self.SendScintilla(2043, line, self.MARKER_ERROR)
+        self.setCursorPosition(line_numbers[0], 0)
+        self.ensureLineVisible(line_numbers[0])
 
     def clear_error_markers(self):
-        self.SendScintilla(2092, 8)
-        self.SendScintilla(2094, 0, self.length())
+        self.SendScintilla(2045, self.MARKER_ERROR, 0)
 
     def _setup_autocompletion(self):
 

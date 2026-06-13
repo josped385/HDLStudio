@@ -292,18 +292,23 @@ class MainWindow(QMainWindow):
             self.hierarchy_dock.update_from_file(None)
 
     def _on_error_clicked(self, filepath, lineno):
-        # Normalize path — handle forward slashes and relative paths
         filepath = filepath.replace("/", "\\")
         if not os.path.isabs(filepath):
-            filepath = os.path.abspath(os.path.join(self.project.root_path or "", filepath))
-        filepath = os.path.normpath(filepath)
+            filepath = os.path.join(self.project.root_path or "", filepath)
+        filepath = os.path.abspath(filepath)
 
-        self.open_project_file(filepath)
-        tab = self.editor_tabs.tabs.get(filepath)
+        # Try case-insensitive tab match first (avoids duplicate on Windows)
+        for p, t in self.editor_tabs.tabs.items():
+            if os.path.abspath(p).lower() == filepath.lower():
+                self.editor_tabs.setCurrentWidget(t.editor)
+                t.editor.set_error_lines([lineno - 1])
+                return
+
+        # Not found -> open file normally
+        self.editor_tabs.open_file(filepath)
+        tab = self.editor_tabs.current_tab()
         if tab:
-            ed = tab.editor
-            ed.setCursorPosition(lineno - 1, 0)
-            ed.ensureLineVisible(lineno - 1)
+            tab.editor.set_error_lines([lineno - 1])
 
     # ---------------- FILE CONTEXT ----------------
 
@@ -376,7 +381,7 @@ class MainWindow(QMainWindow):
                     fpath = os.path.normpath(fpath)
                 if fpath not in errors_by_file:
                     errors_by_file[fpath] = set()
-                errors_by_file[fpath].add(lineno)
+                errors_by_file[fpath].add(lineno - 1)
         for fpath, lines in errors_by_file.items():
             tab = self.editor_tabs.tabs.get(fpath)
             if tab:
@@ -654,13 +659,19 @@ class MainWindow(QMainWindow):
             self.bottom_panel.write_raw(text)
 
         ok = bs.compile(write, output_path=path)
-        self.bottom_panel.append_history("Compiled project")
         if ok:
-            self.bottom_panel.write_ok("Compilation successful")
+            self.bottom_panel.write_ok(
+                f"Compilation successful — {os.path.basename(path)} generated"
+            )
             self.status.showMessage("Compilation successful")
         else:
-            self.bottom_panel.write_error("Compilation failed")
+            self.bottom_panel.write_error(
+                f"Compilation failed — check errors above for details"
+            )
             self.status.showMessage("Compilation failed")
+        self.bottom_panel.append_history(
+            f"Compile: {'OK' if ok else 'FAILED'} ({os.path.basename(path)})"
+        )
 
     def run_project(self):
 
@@ -694,7 +705,7 @@ class MainWindow(QMainWindow):
         write = self.bottom_panel.write_raw
 
         ok = bs.run(write, sim_path=sim_path)
-        self.bottom_panel.append_history("Ran project simulation")
+        sim_name = os.path.basename(sim_path) if sim_path else "vvp"
 
         if ok:
             generated = bs.last_vcd_path
@@ -709,6 +720,17 @@ class MainWindow(QMainWindow):
                 except OSError as e:
                     write(f"\n>> Could not rename waveform: {e}\n")
 
+        if ok:
+            self.bottom_panel.write_ok(
+                f"Simulation completed — VCD saved to {os.path.basename(vcd_path)}"
+            )
+        else:
+            self.bottom_panel.write_error(
+                f"Simulation failed — check errors above for details"
+            )
+        self.bottom_panel.append_history(
+            f"Run: {'OK' if ok else 'FAILED'} (VCD: {os.path.basename(vcd_path)})"
+        )
         self.status.showMessage(
             "Simulation finished" if ok else "Simulation failed"
         )
@@ -764,22 +786,30 @@ class MainWindow(QMainWindow):
 
         ok = bs.compile(write, output_path=sim_out)
         if not ok:
-            self.bottom_panel.write_error("Compilation failed — aborting debug")
-            self.bottom_panel.append_history("Debug: compile failed")
+            self.bottom_panel.write_error(
+                "Compilation failed — aborting debug. Check errors above."
+            )
+            self.bottom_panel.append_history("Debug: compile FAILED")
             self.status.showMessage("Debug: compilation failed")
             return
 
-        self.bottom_panel.write_ok("Compilation OK — starting simulation")
+        self.bottom_panel.write_ok(
+            f"Compilation OK ({os.path.basename(sim_out)}) — starting simulation"
+        )
         self.bottom_panel.write_header("DEBUG — RUN")
 
         ok = bs.run(write, sim_path=None if bs.simulator == bs.SIM_VERILATOR else sim_out)
         self.bottom_panel.append_history("Debug: ran simulation")
 
         if not ok:
-            self.bottom_panel.write_error("Simulation failed")
+            self.bottom_panel.write_error(
+                "Simulation failed — check errors above for details"
+            )
             self.status.showMessage("Debug: simulation failed")
-            self.bottom_panel.append_history("Debug finished (failed)")
+            self.bottom_panel.append_history("Debug finished (FAILED)")
             return
+
+        self.bottom_panel.write_ok("Simulation completed successfully")
 
         generated = bs.last_vcd_path
         if generated and os.path.isfile(generated):
@@ -903,7 +933,6 @@ class MainWindow(QMainWindow):
         for tab in self.editor_tabs.tabs.values():
             path = getattr(tab, 'path', None) or ''
             if os.path.normpath(path) == os.path.normpath(tb_file):
-                tab.editor.clear_error_markers()
                 if closest_line is not None:
                     tab.editor.set_error_lines([closest_line - 1])
                 break
