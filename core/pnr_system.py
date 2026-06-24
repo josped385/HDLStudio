@@ -1,16 +1,109 @@
 import json
 import os
 import re
+import sys
 import tempfile
 import shutil
 
 
-def nextpnr_available():
+# ──────────────────────────────────────────────
+# Family definitions
+# ──────────────────────────────────────────────
+
+FAMILIES = {
+    "ice40": {
+        "label": "Lattice iCE40",
+        "module": "yowasp_nextpnr_ice40",
+        "runner": "run_nextpnr_ice40",
+        "output_flag": "--asc",
+        "output_ext": ".asc",
+        "packer": {
+            "module": "yowasp_nextpnr_ice40",
+            "runner": "run_icepack",
+            "input_flag": None,
+            "input_ext": ".asc",
+            "output_ext": ".bin",
+        },
+    },
+    "ecp5": {
+        "label": "Lattice ECP5",
+        "module": "yowasp_nextpnr_ecp5",
+        "runner": "run_nextpnr_ecp5",
+        "output_flag": "--textcfg",
+        "output_ext": ".config",
+        "packer": {
+            "module": "yowasp_nextpnr_ecp5",
+            "runner": "run_ecppack",
+            "input_flag": None,
+            "input_ext": ".config",
+            "output_ext": ".bit",
+        },
+    },
+    "nexus": {
+        "label": "Lattice Nexus",
+        "module": "yowasp_nextpnr_nexus",
+        "runner": "run_nextpnr_nexus",
+        "output_flag": "--bit",
+        "output_ext": ".bit",
+        "packer": None,
+    },
+    "machxo2": {
+        "label": "Lattice MachXO2",
+        "module": "yowasp_nextpnr_machxo2",
+        "runner": "run_nextpnr_machxo2",
+        "output_flag": "--textcfg",
+        "output_ext": ".config",
+        "packer": {
+            "module": "yowasp_nextpnr_machxo2",
+            "runner": "run_ecppack",
+            "input_flag": None,
+            "input_ext": ".config",
+            "output_ext": ".bit",
+        },
+    },
+    "gowin": {
+        "label": "Gowin (himbaechel)",
+        "module": "yowasp_nextpnr_himbaechel_gowin",
+        "runner": "run_nextpnr_himbaechel_gowin",
+        "output_flag": "--fasm",
+        "output_ext": ".fasm",
+        "packer": {
+            "module": None,
+            "runner": "gowin_pack",
+            "input_flag": None,
+            "input_ext": ".fasm",
+            "output_ext": ".fs",
+        },
+    },
+}
+
+# ── iCE40/ECP5 have per-device flags; the rest use --device <name>
+_DEVICE_FLAGS = {
+    "lp384": "--lp384", "lp1k": "--lp1k", "lp4k": "--lp4k",
+    "lp8k": "--lp8k", "hx1k": "--hx1k", "hx4k": "--hx4k",
+    "hx8k": "--hx8k", "up3k": "--up3k", "up5k": "--up5k",
+    "u1k": "--u1k", "u2k": "--u2k", "u4k": "--u4k",
+    "12k": "--12k", "25k": "--25k", "45k": "--45k", "85k": "--85k",
+}
+
+
+# ──────────────────────────────────────────────
+# Availability checks
+# ──────────────────────────────────────────────
+
+def family_available(family_key):
+    info = FAMILIES.get(family_key)
+    if not info:
+        return False
     try:
-        from yowasp_nextpnr_ice40 import run_nextpnr_ice40
+        __import__(info["module"])
         return True
     except ImportError:
         return False
+
+
+def nextpnr_available():
+    return family_available("ice40")
 
 
 def icepack_available():
@@ -20,6 +113,10 @@ def icepack_available():
     except ImportError:
         return False
 
+
+# ──────────────────────────────────────────────
+# Report parsing (shared across families)
+# ──────────────────────────────────────────────
 
 def _parse_pnr_report(report_path):
     try:
@@ -47,33 +144,24 @@ def _parse_pnr_report(report_path):
 def _parse_pnr_log(log_text):
     info = {}
     for line in log_text.splitlines():
-        # "ICESTORM_LC: 3/ 1280 0%"
-        m = re.search(r'(ICESTORM_LC|ICESTORM_RAM|SB_IO|SB_GB|ICESTORM_PLL|SB_WARMBOOT):\s+(\d+)\s*/\s*(\d+)', line)
+        m = re.search(r'Info: Device utilisation:\s*$', line)
+        if m:
+            continue
+        # Generic resource usage: "TYPE: used/total  pct%"
+        m = re.search(r'(\w[\w_]*)\s*:\s+(\d+)\s*/\s*(\d+)', line)
         if m:
             name, used, total = m.group(1), int(m.group(2)), int(m.group(3))
-            label_map = {
-                "ICESTORM_LC": "luts",
-                "ICESTORM_RAM": "bram",
-                "SB_IO": "io",
-                "SB_GB": "global_buffers",
-                "ICESTORM_PLL": "pll",
-                "SB_WARMBOOT": "warmboot",
-            }
-            key = label_map.get(name, name.lower())
+            key = name.lower().replace(" ", "_")
             info[f"{key}_used"] = used
             info[f"{key}_total"] = total
-
-        # "0.38 ns logic, 1.18 ns routing"
+        # iCE40-specific delay line
         m = re.search(r'([\d.]+)\s*ns\s+logic,\s*([\d.]+)\s*ns\s+routing', line)
         if m:
             info["logic_delay_ns"] = float(m.group(1))
             info["routing_delay_ns"] = float(m.group(2))
             info["total_delay_ns"] = round(float(m.group(1)) + float(m.group(2)), 2)
-
-        # "No Fmax available; no interior timing paths found"
         if "No Fmax available" in line:
             info["fmax"] = "N/A"
-
     return info if info else {"note": "Could not parse log"}
 
 
@@ -105,7 +193,7 @@ def _format_pnr_summary(info):
             lines.append("  Fmax: N/A (no interior timing paths)")
     lines.append("")
     res_block = False
-    for key, label in [("luts", "LUTs (LCs)"),
+    for key, label in [("luts", "LUTs"),
                         ("bram", "BRAM blocks"),
                         ("io", "IO pins"),
                         ("pll", "PLLs"),
@@ -131,12 +219,120 @@ def _format_pnr_summary(info):
     return lines
 
 
-def run_pnr(terminal_callback, json_path, asc_path=None,
+# ──────────────────────────────────────────────
+# Tool runner helpers
+# ──────────────────────────────────────────────
+
+def _import_runner(family_key):
+    info = FAMILIES[family_key]
+    mod = __import__(info["module"], fromlist=[info["runner"]])
+    return getattr(mod, info["runner"])
+
+
+def _build_args(family_key, src_name, output_name, log_name, report_name,
+                device, package, frequency):
+    info = FAMILIES[family_key]
+    args = ["--json", src_name, info["output_flag"], output_name,
+            "--log", log_name, "--report", report_name]
+
+    dev_lower = device.lower()
+    if dev_lower in _DEVICE_FLAGS:
+        args.append(_DEVICE_FLAGS[dev_lower])
+    else:
+        args.extend(["--device", device])
+
+    if package:
+        args.extend(["--package", package])
+    if frequency:
+        args.extend(["--freq", str(frequency)])
+    return args
+
+
+def _run_packer(packer_info, terminal_callback, input_path, output_path,
+                device=None):
+    """Run the bitstream packer (icepack, ecppack, gowin_pack, etc.)."""
+    runner = packer_info["runner"]
+    module_name = packer_info["module"]
+
+    if runner == "gowin_pack":
+        from apycula import gowin_pack
+        if device is None:
+            device = "auto"
+        tmp = tempfile.mkdtemp(prefix="gowinpack_")
+        try:
+            in_copy = os.path.join(tmp, "input.fasm")
+            out_name = os.path.basename(output_path)
+            shutil.copy2(input_path, in_copy)
+            old_argv = sys.argv
+            sys.argv = ["gowin_pack", "-d", device, "-o", out_name, in_copy]
+            try:
+                gowin_pack.main()
+            except SystemExit:
+                pass
+            sys.argv = old_argv
+            out_file = os.path.join(tmp, out_name)
+            if os.path.isfile(out_file):
+                os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+                shutil.copy2(out_file, output_path)
+                terminal_callback(f"Bitstream generated -> {output_path}\n")
+                return output_path
+            terminal_callback("gowin_pack did not produce output.\n")
+            return None
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    else:
+        # Standard yowasp packer (icepack, ecppack, etc.)
+        try:
+            mod = __import__(module_name, fromlist=[runner])
+            run_fn = getattr(mod, runner)
+        except ImportError:
+            terminal_callback(f"{runner} not available.\n")
+            return None
+
+        work_dir = tempfile.mkdtemp(prefix="pack_")
+        try:
+            in_name = "input" + packer_info["input_ext"]
+            out_name = os.path.basename(output_path)
+            shutil.copy2(input_path, os.path.join(work_dir, in_name))
+            orig_cwd = os.getcwd()
+            os.chdir(work_dir)
+            try:
+                run_fn([in_name, out_name])
+            except SystemExit:
+                pass
+            except Exception as e:
+                terminal_callback(f"{runner} error: {e}\n")
+                os.chdir(orig_cwd)
+                return None
+            os.chdir(orig_cwd)
+            out_file = os.path.join(work_dir, out_name)
+            if os.path.isfile(out_file):
+                os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+                shutil.copy2(out_file, output_path)
+                terminal_callback(f"Bitstream generated -> {output_path}\n")
+                return output_path
+            terminal_callback(f"{runner} did not produce output.\n")
+            return None
+        finally:
+            os.chdir(orig_cwd)
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+
+# ──────────────────────────────────────────────
+# Public API
+# ──────────────────────────────────────────────
+
+def run_pnr(terminal_callback, family_key, json_path, output_path=None,
             device="hx1k", package=None, frequency=None):
-    if not nextpnr_available():
+    info = FAMILIES.get(family_key)
+    if not info:
+        terminal_callback(f"Unknown FPGA family: {family_key}\n")
+        return None, None
+
+    if not family_available(family_key):
         terminal_callback(
-            "yowasp-nextpnr-ice40 not installed.\n"
-            "Run: pip install yowasp-nextpnr-ice40\n"
+            f"{info['label']} package ({info['module']}) not installed.\n"
+            f"Run: pip install {info['module']}\n"
         )
         return None, None
 
@@ -144,13 +340,14 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
         terminal_callback(f"JSON file not found: {json_path}\n")
         return None, None
 
-    from yowasp_nextpnr_ice40 import run_nextpnr_ice40
+    run_fn = _import_runner(family_key)
 
     src_name = os.path.basename(json_path)
     base = os.path.splitext(src_name)[0]
 
-    if asc_path is None:
-        asc_path = os.path.join(os.path.dirname(json_path), f"{base}.asc")
+    if output_path is None:
+        output_path = os.path.join(os.path.dirname(json_path),
+                                   f"{base}{info['output_ext']}")
 
     work_dir = tempfile.mkdtemp(prefix="pnr_")
     try:
@@ -158,36 +355,15 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
         orig_cwd = os.getcwd()
         os.chdir(work_dir)
 
-        asc_name = os.path.basename(asc_path)
+        out_name = os.path.basename(output_path)
         log_name = f"{base}.log"
         report_name = f"{base}_report.json"
 
-        args = [
-            "--json", src_name,
-            "--asc", asc_name,
-            "--log", log_name,
-            "--report", report_name,
-        ]
-
-        device_args = {
-            "lp384": "--lp384", "lp1k": "--lp1k", "lp4k": "--lp4k",
-            "lp8k": "--lp8k", "hx1k": "--hx1k", "hx4k": "--hx4k",
-            "hx8k": "--hx8k", "up3k": "--up3k", "up5k": "--up5k",
-            "u1k": "--u1k", "u2k": "--u2k", "u4k": "--u4k",
-        }
-        dev = device.lower()
-        if dev in device_args:
-            args.append(device_args[dev])
-        else:
-            args.append(f"--{dev}")
-
-        if package:
-            args.extend(["--package", package])
-        if frequency:
-            args.extend(["--freq", str(frequency)])
+        args = _build_args(family_key, src_name, out_name, log_name,
+                           report_name, device, package, frequency)
 
         terminal_callback(
-            f"Running nextpnr-ice40 on {src_name}...\n"
+            f"Running {info['module']} on {src_name}...\n"
             f"  Device: {device}"
         )
         if package:
@@ -197,7 +373,7 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
         terminal_callback("\n\n")
 
         try:
-            run_nextpnr_ice40(args)
+            run_fn(args)
         except SystemExit:
             pass
         except Exception as e:
@@ -217,7 +393,7 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
         else:
             terminal_callback("(no log file produced)\n")
 
-        # Best-effort report: try JSON report, fallback to log parsing
+        # Parse JSON report
         report_info = None
         report_path = os.path.join(work_dir, report_name)
         if os.path.isfile(report_path):
@@ -229,7 +405,7 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
                 if log_info and "note" not in log_info:
                     report_info = log_info
 
-        # Show summary block in console
+        # Show summary
         summary = _format_pnr_summary(report_info)
         if summary:
             terminal_callback("\n" + "─" * 40 + "\n")
@@ -238,14 +414,14 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
             terminal_callback("─" * 40 + "\n")
 
         # Copy result
-        out_file = os.path.join(work_dir, asc_name)
+        out_file = os.path.join(work_dir, out_name)
         if os.path.isfile(out_file):
-            os.makedirs(os.path.dirname(asc_path) or ".", exist_ok=True)
-            shutil.copy2(out_file, asc_path)
-            terminal_callback(f"\nPlace & Route complete -> {asc_path}\n")
-            return asc_path, report_info
+            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+            shutil.copy2(out_file, output_path)
+            terminal_callback(f"\nPlace & Route complete -> {output_path}\n")
+            return output_path, report_info
         else:
-            terminal_callback("\nnextpnr did not produce an ASC file.\n")
+            terminal_callback(f"\nnextpnr did not produce an output file.\n")
             for f in os.listdir(work_dir):
                 if f not in (src_name, log_name):
                     terminal_callback(f"  Output: {f}\n")
@@ -255,47 +431,37 @@ def run_pnr(terminal_callback, json_path, asc_path=None,
         shutil.rmtree(work_dir, ignore_errors=True)
 
 
+def pack_bitstream(terminal_callback, family_key, input_path, output_path=None,
+                   device=None):
+    info = FAMILIES.get(family_key)
+    if not info:
+        terminal_callback(f"Unknown FPGA family: {family_key}\n")
+        return None
+
+    packer = info.get("packer")
+    if not packer:
+        terminal_callback(f"{info['label']} has no separate bitstream pack step.\n")
+        return None
+
+    if not os.path.isfile(input_path):
+        terminal_callback(f"Input file not found: {input_path}\n")
+        return None
+
+    if output_path is None:
+        base = os.path.splitext(input_path)[0]
+        output_path = f"{base}{packer['output_ext']}"
+
+    terminal_callback(f"Packing bitstream...\n")
+    return _run_packer(packer, terminal_callback, input_path, output_path, device)
+
+
+# ── Backward compatibility shims ──
+
+def run_pnr_legacy(terminal_callback, json_path, asc_path=None,
+                   device="hx1k", package=None, frequency=None):
+    return run_pnr(terminal_callback, "ice40", json_path, asc_path,
+                   device, package, frequency)
+
+
 def run_icepack(terminal_callback, asc_path, bin_path=None):
-    if not icepack_available():
-        terminal_callback("icepack not available (yowasp-nextpnr-ice40).\n")
-        return None
-
-    if not os.path.isfile(asc_path):
-        terminal_callback(f"ASC file not found: {asc_path}\n")
-        return None
-
-    from yowasp_nextpnr_ice40 import run_icepack
-
-    if bin_path is None:
-        bin_path = os.path.splitext(asc_path)[0] + ".bin"
-
-    work_dir = tempfile.mkdtemp(prefix="icepack_")
-    try:
-        shutil.copy2(asc_path, os.path.join(work_dir, "input.asc"))
-        orig_cwd = os.getcwd()
-        os.chdir(work_dir)
-
-        terminal_callback(f"Running icepack on {os.path.basename(asc_path)}...\n")
-
-        try:
-            run_icepack(["input.asc", os.path.basename(bin_path)])
-        except SystemExit:
-            pass
-        except Exception as e:
-            terminal_callback(f"icepack error: {e}\n")
-            os.chdir(orig_cwd)
-            return None
-
-        os.chdir(orig_cwd)
-
-        out_file = os.path.join(work_dir, os.path.basename(bin_path))
-        if os.path.isfile(out_file):
-            os.makedirs(os.path.dirname(bin_path) or ".", exist_ok=True)
-            shutil.copy2(out_file, bin_path)
-            terminal_callback(f"Bitstream generated -> {bin_path}\n")
-            return bin_path
-        terminal_callback("icepack did not produce a bitstream file.\n")
-        return None
-    finally:
-        os.chdir(orig_cwd)
-        shutil.rmtree(work_dir, ignore_errors=True)
+    return pack_bitstream(terminal_callback, "ice40", asc_path, bin_path)

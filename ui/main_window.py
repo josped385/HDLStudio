@@ -1178,15 +1178,29 @@ class MainWindow(QMainWindow):
             self.status.showMessage("No JSON file selected")
             return
 
-        from core.pnr_system import run_pnr
+        # Show PnR configuration dialog
+        from ui.pnr_dialog import PnrDialog
+        from core.pnr_system import FAMILIES
 
-        default_asc = os.path.splitext(os.path.basename(path))[0] + ".asc"
-        asc_path, _ = QFileDialog.getSaveFileName(
+        dlg = PnrDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        family_key = dlg.family_key()
+        device = dlg.device()
+        package = dlg.package()
+        frequency = dlg.frequency()
+
+        family_info = FAMILIES.get(family_key, {})
+        out_ext = family_info.get("output_ext", ".bin")
+
+        default_out = os.path.splitext(os.path.basename(path))[0] + out_ext
+        output_path, _ = QFileDialog.getSaveFileName(
             self, "Save PnR output",
-            os.path.join(self._default_dialog_dir(), default_asc),
-            "ASC (*.asc);;All Files (*)"
+            os.path.join(self._default_dialog_dir(), default_out),
+            f"*{out_ext};;All Files (*)"
         )
-        if not asc_path:
+        if not output_path:
             return
 
         self.bottom_panel.clear_console()
@@ -1196,17 +1210,41 @@ class MainWindow(QMainWindow):
         write = self.bottom_panel.write_raw
         self.status.showMessage("Running Place & Route...")
 
+        from core.pnr_system import run_pnr, pack_bitstream
+
         try:
-            asc_path_result, report_info = run_pnr(
-                write, path, asc_path=asc_path or None,
-                device="hx1k", package=None, frequency=12
+            result_path, report_info = run_pnr(
+                write, family_key, path, output_path=output_path or None,
+                device=device, package=package, frequency=frequency,
             )
-            if asc_path_result:
+            if result_path:
                 self.bottom_panel.write_ok("Place & Route complete")
                 self.status.showMessage("Place & Route complete")
-                self.bottom_panel.append_history(f"Place & Route: {os.path.basename(path)}")
+                self.bottom_panel.append_history(
+                    f"Place & Route ({family_key}): {os.path.basename(path)}"
+                )
                 if report_info:
                     self._show_pnr_report(report_info)
+
+                # Offer to pack bitstream if a packer is available
+                if family_info.get("packer"):
+                    from PyQt6.QtWidgets import QMessageBox
+                    packer_ext = family_info["packer"]["output_ext"]
+                    reply = QMessageBox.question(
+                        self, "Pack bitstream",
+                        f"Generate bitstream file (*{packer_ext})?",
+                        QMessageBox.StandardButton.Yes |
+                        QMessageBox.StandardButton.No
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        bin_default = os.path.splitext(result_path)[0] + packer_ext
+                        bin_path, _ = QFileDialog.getSaveFileName(
+                            self, "Save bitstream",
+                            os.path.join(self._default_dialog_dir(), bin_default),
+                            f"*{packer_ext};;All Files (*)"
+                        )
+                        if bin_path:
+                            pack_bitstream(write, family_key, result_path, bin_path, device)
             else:
                 self.bottom_panel.write_error("Place & Route failed")
                 self.status.showMessage("Place & Route failed")

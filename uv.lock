@@ -12,6 +12,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apycula"
+version = "0.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "crc" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ee/e4/bbb1ae63a1e7244194fcb19b1a2d38c00230484ac8421a4418ad083754d5/Apycula-0.15.tar.gz", hash = "sha256:060e671ef51a5be707644ce6674f18b97c1e715c7a47cb72b3c641baa5048538", size = 13662931, upload-time = "2024-10-20T15:30:01.701Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/0a/56204abb5387596b3bb3d4c269157f9facf60e2178dbbcf61af6a5d325b2/Apycula-0.15-py3-none-any.whl", hash = "sha256:ef440317590df73151130b5eabcc33a9bbbb52adae6203cbbd5d25174364ccc9", size = 9684559, upload-time = "2024-10-20T15:29:58.558Z" },
+]
+
+[[package]]
 name = "click"
 version = "8.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -33,6 +45,15 @@ wheels = [
 ]
 
 [[package]]
+name = "crc"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/e6/c3488c35ecae290751466252e5ea01ef50fc67bfc1a9aba43983329b7025/crc-7.1.0.tar.gz", hash = "sha256:99dd540909a37ae4f62c65441df8ecb4e7f9af014fecaf4f331052a41d66c07d", size = 9888, upload-time = "2024-11-05T20:34:28.983Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/ff/5ebeae9b53e8cddd9e6f3b6b0c98da3f112d9a7e1ea638a00876aa8fb5b4/crc-7.1.0-py3-none-any.whl", hash = "sha256:b9845c81d0b900d8fda1aae7af977035bee0359c279713814e9fd23a2d59db6a", size = 8790, upload-time = "2024-11-05T20:34:27.629Z" },
+]
+
+[[package]]
 name = "hdlstudio"
 version = "0.1.0"
 source = { virtual = "." }
@@ -41,7 +62,12 @@ dependencies = [
     { name = "pyqt6" },
     { name = "pyqt6-qscintilla" },
     { name = "pyqt6-sip" },
+    { name = "yowasp-nextpnr-ecp5" },
+    { name = "yowasp-nextpnr-gowin" },
+    { name = "yowasp-nextpnr-himbaechel-gatemate" },
     { name = "yowasp-nextpnr-ice40" },
+    { name = "yowasp-nextpnr-machxo2" },
+    { name = "yowasp-nextpnr-nexus" },
     { name = "yowasp-yosys" },
 ]
 
@@ -51,7 +77,12 @@ requires-dist = [
     { name = "pyqt6", specifier = "==6.11.0" },
     { name = "pyqt6-qscintilla", specifier = "==2.14.1" },
     { name = "pyqt6-sip", specifier = ">=13.11.1" },
+    { name = "yowasp-nextpnr-ecp5", specifier = "==0.10.0.75.post792.dev0" },
+    { name = "yowasp-nextpnr-gowin", specifier = "==0.7.0.177.post611" },
+    { name = "yowasp-nextpnr-himbaechel-gatemate", specifier = "==0.10.0.75.post792.dev0" },
     { name = "yowasp-nextpnr-ice40", specifier = "==0.10.0.75.post792.dev0" },
+    { name = "yowasp-nextpnr-machxo2", specifier = "==0.10.0.75.post792.dev0" },
+    { name = "yowasp-nextpnr-nexus", specifier = "==0.10.0.75.post792.dev0" },
     { name = "yowasp-yosys", specifier = "==0.65.0.0.post1154" },
 ]
 
@@ -238,6 +269,40 @@ wheels = [
 ]
 
 [[package]]
+name = "yowasp-nextpnr-ecp5"
+version = "0.10.0.75.post792.dev0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/6d/c0ed679e87e1c088398537f0ec804194b67d1b7ad2455cf769d68e0d57a2/yowasp_nextpnr_ecp5-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:f9a50922ae08c7bb6be6acd15ebfa7b63a9ad1e3716e6405fa0885636c373162", size = 30014764, upload-time = "2026-05-27T13:19:55.297Z" },
+]
+
+[[package]]
+name = "yowasp-nextpnr-gowin"
+version = "0.7.0.177.post611"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apycula" },
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/e9/e5ed0117296b9238cbfa8db6201caa51d89c0d9cbb03f6f16ce8e4983b7d/yowasp_nextpnr_gowin-0.7.0.177.post611-py3-none-any.whl", hash = "sha256:1b7dc8b399a6a0471b770bb9b620d5c328862aa602a1fe53e3b8790b9c165848", size = 1429658, upload-time = "2025-02-14T00:06:34.468Z" },
+]
+
+[[package]]
+name = "yowasp-nextpnr-himbaechel-gatemate"
+version = "0.10.0.75.post792.dev0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/6c/87cc404297dfee78291f37d1d95f58fea5238a1c96de35a906016652b270/yowasp_nextpnr_himbaechel_gatemate-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:e52fcdea2ecede3ff131d19707424cdc4d4999e9009d86c367bd09e850211f00", size = 3844672, upload-time = "2026-05-27T13:19:58.931Z" },
+]
+
+[[package]]
 name = "yowasp-nextpnr-ice40"
 version = "0.10.0.75.post792.dev0"
 source = { registry = "https://pypi.org/simple" }
@@ -246,6 +311,28 @@ dependencies = [
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/77/e0bbf8d1c260e7a81f3de02db57f73b372380d296467b44849a3b83ac8cb/yowasp_nextpnr_ice40-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:d45639e9e08e4c836510217f8a76d4da0245e88c8b883babc3ea691c0680bfe8", size = 71784551, upload-time = "2026-05-27T13:20:14.324Z" },
+]
+
+[[package]]
+name = "yowasp-nextpnr-machxo2"
+version = "0.10.0.75.post792.dev0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/4e/08659b2be16265090f354a8ad3d225a969cae9a6b185264256a127a8085b/yowasp_nextpnr_machxo2-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:8e93502414340609eb4725c7603f10ef762746ae15fc31cb4b7cd192551ea660", size = 36275609, upload-time = "2026-05-27T13:20:20.837Z" },
+]
+
+[[package]]
+name = "yowasp-nextpnr-nexus"
+version = "0.10.0.75.post792.dev0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "yowasp-runtime" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/3a/74ac6c8b3284422657fb194ce0fda5da7413b79421c77b54c3eaeb917f1d/yowasp_nextpnr_nexus-0.10.0.75.post792.dev0-py3-none-any.whl", hash = "sha256:74795fc32c6b2dd123a4a2c345be1c694c01ecbffdbab9f79da48f7554786163", size = 7178409, upload-time = "2026-05-27T13:20:24.477Z" },
 ]
 
 [[package]]
