@@ -78,6 +78,9 @@ class IDEActions:
         self.show_schematic = QAction("Show Schematic", main_window)
         self.show_schematic.setShortcut(QKeySequence("Ctrl+Shift+D"))
 
+        self.formal_verify = QAction("Formal Verification", main_window)
+        self.formal_verify.setShortcut(QKeySequence("Ctrl+Shift+F"))
+
         self.place_and_route = QAction(QIcon(ThemeManager.icon("pnr")), "Place && Route", main_window)
         self.place_and_route.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
@@ -113,6 +116,7 @@ class IDEActions:
         self.gen_tb.triggered.connect(lambda checked: self.main.generate_testbench())
         self.synthesize.triggered.connect(lambda checked: self.main.synthesize_file())
         self.show_schematic.triggered.connect(lambda checked: self.main.show_schematic_current_file())
+        self.formal_verify.triggered.connect(lambda checked: self.main.formal_verify_file())
         self.place_and_route.triggered.connect(lambda checked: self.main.place_and_route_file())
         self.toggle_theme.triggered.connect(self.main.toggle_theme)
 

@@ -69,6 +69,12 @@ along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</pr
       <tr><td>Graphviz</td><td>EPL v1</td><td>&#x2713; (local tools/)</td></tr>
       <tr><td>Yosys (yowasp-yosys)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
       <tr><td>nextpnr-ice40 (yowasp-nextpnr-ice40)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>nextpnr-ecp5 (yowasp-nextpnr-ecp5)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>nextpnr-nexus (yowasp-nextpnr-nexus)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>nextpnr-machxo2 (yowasp-nextpnr-machxo2)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>nextpnr-himbaechel-gowin (yowasp-nextpnr-himbaechel-gowin)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>SymbiYosys (yowasp-sby)</td><td>ISC</td><td>&#x2713; (pip)</td></tr>
+      <tr><td>Boolector (yowasp-boolector)</td><td>MIT</td><td>&#x2713; (pip)</td></tr>
       <tr><td>Verilator</td><td>LGPL v3 / Artistic 2.0</td><td>WSL2 only / Docker</td></tr>
     </table>
     <p>Note: GPL v3 was chosen because PyQt6 requires it. All other tools are compatible with this license.</p>
@@ -80,7 +86,11 @@ along with this program.  If not, see &lt;https://www.gnu.org/licenses/&gt;.</pr
       <li>GTKWave waveform viewer (bundled)</li>
       <li>Yosys-based synthesis (BLIF, JSON, Verilog, EDIF)</li>
       <li>Gate-level schematic viewer (Yosys + Graphviz)</li>
-      <li>Lattice iCE40 place &amp; route (nextpnr-ice40)</li>
+      <li>Multi-FPGA place &amp; route: iCE40, ECP5, Nexus, MachXO2, Gowin (nextpnr)</li>
+      <li>Formal verification with SymbiYosys + Boolector SMT solver</li>
+      <li>Step debugger with VCD time-point navigation and testbench line highlighting</li>
+      <li>Problems panel with structured error/warning table and clickable source navigation</li>
+      <li>Error markers in editor with yellow highlighting</li>
       <li>Python extension/plugin system</li>
       <li>Dark and light themes</li>
       <li>Settings dialog with editor and extension configuration</li>

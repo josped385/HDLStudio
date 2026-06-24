@@ -88,8 +88,35 @@
 
     <h2>Place &amp; Route</h2>
     <p>Right-click a synthesized JSON file and select <strong>Place &amp; Route</strong> (<code>Ctrl+Shift+P</code>), or use the toolbar button / <strong>Tools &gt; Place &amp; Route</strong>.</p>
-    <p>HDLStudio runs <code>yowasp-nextpnr-ice40</code> with your JSON, producing an <code>.asc</code> bitstream file, plus a report with logic cell usage, I/O block counts and delay line data.</p>
-    <p>A summary dialog displays structured metrics. The complete log is available in the PnR output window.</p>
+    <p>HDLStudio opens a configuration dialog where you select the <strong>FPGA family</strong>, <strong>device</strong>, <strong>package</strong> and <strong>frequency</strong>. Supported families:</p>
+    <ul>
+      <li><strong>Lattice iCE40</strong> &mdash; nextpnr-ice40, output <code>.asc</code> &rarr; icepack &rarr; <code>.bin</code></li>
+      <li><strong>Lattice ECP5</strong> &mdash; nextpnr-ecp5, output <code>.config</code> &rarr; ecppack &rarr; <code>.bit</code></li>
+      <li><strong>Lattice Nexus</strong> &mdash; nextpnr-nexus, output <code>.bit</code> (no separate pack step)</li>
+      <li><strong>Lattice MachXO2</strong> &mdash; nextpnr-machxo2, output <code>.config</code> &rarr; ecppack &rarr; <code>.bit</code></li>
+      <li><strong>Gowin (himbaechel)</strong> &mdash; nextpnr-himbaechel-gowin, output <code>.fasm</code> &rarr; gowin_pack &rarr; <code>.fs</code></li>
+    </ul>
+    <p>A summary dialog displays structured metrics (timing, resource usage). The complete log is available in the PnR output window.</p>
+
+    <h2>Formal Verification</h2>
+    <p>From <strong>Tools &gt; Formal Verification</strong> (<code>Ctrl+Shift+F</code>), select a <code>.sby</code> (SymbiYosys) configuration file. HDLStudio runs <code>yowasp-sby</code> with the Boolector SMT solver and displays the results in the console.</p>
+    <p>The solver is found automatically via <code>yowasp-boolector</code> on the Python Scripts path. Results show <strong>PASSED</strong> or <strong>FAILED</strong> with the full solver output.</p>
+
+    <h2>Debug Mode</h2>
+    <p>Press <strong>F8</strong> or select <strong>Tools &gt; Debug</strong> to open the Debug Configuration dialog. Two modes are available:</p>
+    <h3>Complete Mode</h3>
+    <p>Compiles the design, runs the simulation, and opens GTKWave automatically with the generated VCD trace.</p>
+    <h3>Step-by-Time Mode</h3>
+    <p>After simulation, use the step controls in the toolbar to navigate through time points:</p>
+    <ul>
+      <li><strong>Step Forward</strong> (<code>Ctrl+Shift+Right</code>) &mdash; advance to the next time point</li>
+      <li><strong>Step Back</strong> (<code>Ctrl+Shift+Left</code>) &mdash; go to the previous time point</li>
+      <li><strong>Stop Debug</strong> (<code>Shift+F5</code>) &mdash; exit step mode and clear highlights</li>
+    </ul>
+    <p>During stepping, the Debug dock shows a table of all signal names and values at the current time point. Corresponding <code>#delay</code> lines in the testbench are highlighted in yellow in the editor.</p>
+
+    <h2>Problems Panel</h2>
+    <p>When a compilation or simulation produces errors or warnings, they appear in the <strong>Problems</strong> tab of the bottom panel as a structured table (Type, File, Line, Message). Click any row to navigate directly to the offending line in the editor, where a yellow marker highlights the error.</p>
 
     <h2>Keyboard Shortcuts</h2>
     <table>
@@ -98,9 +125,14 @@
       <tr><td><code>F6</code></td><td>Compile project (all files)</td></tr>
       <tr><td><code>F9</code></td><td>Run simulation</td></tr>
       <tr><td><code>F7</code></td><td>Open waveform in GTKWave</td></tr>
+      <tr><td><code>F8</code></td><td>Debug (Complete or Step-by-Time)</td></tr>
+      <tr><td><code>Ctrl+Shift+Right</code></td><td>Step Forward (debug time point)</td></tr>
+      <tr><td><code>Ctrl+Shift+Left</code></td><td>Step Back (debug time point)</td></tr>
+      <tr><td><code>Shift+F5</code></td><td>Stop Debug</td></tr>
       <tr><td><code>Ctrl+Shift+Y</code></td><td>Synthesize</td></tr>
+      <tr><td><code>Ctrl+Shift+F</code></td><td>Formal Verification</td></tr>
       <tr><td><code>Ctrl+Shift+P</code></td><td>Place &amp; Route</td></tr>
-      <tr><td><code>Ctrl+T</code></td><td>Toggle dark/light theme</td></tr>
+      <tr><td><code>Ctrl+Shift+T</code></td><td>Toggle dark/light theme</td></tr>
       <tr><td><code>Ctrl+K Ctrl+O</code></td><td>Open folder</td></tr>
       <tr><td><code>Ctrl+F</code></td><td>Find in file</td></tr>
       <tr><td><code>Ctrl+H</code></td><td>Find &amp; replace in file</td></tr>

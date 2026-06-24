@@ -7,6 +7,7 @@ dependencies = [
     "pyqt6==6.11.0",
     "pyqt6-qscintilla==2.14.1",
     "pyqt6-sip>=13.11.1",
+    "yowasp-boolector==3.2.3.6.post31.dev0",
     "yowasp-nextpnr-ecp5==0.10.0.75.post792.dev0",
     "yowasp-nextpnr-gowin==0.7.0.177.post611",
     "yowasp-nextpnr-himbaechel-gatemate==0.10.0.75.post792.dev0",

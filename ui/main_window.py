@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
         tools_menu.addAction(self.ide_actions.gen_tb)
         tools_menu.addAction(self.ide_actions.synthesize)
         tools_menu.addAction(self.ide_actions.show_schematic)
+        tools_menu.addAction(self.ide_actions.formal_verify)
         tools_menu.addAction(self.ide_actions.place_and_route)
 
         view_menu = menu.addMenu("View")
@@ -1252,6 +1253,68 @@ class MainWindow(QMainWindow):
             self.bottom_panel.write_error(f"PnR error: {e}")
             self.status.showMessage(f"PnR error: {e}")
 
+    def formal_verify_file(self):
+
+        sby_path, _ = QFileDialog.getOpenFileName(
+            self, "Select SymbiYosys config (.sby)",
+            self._default_dialog_dir(),
+            "SBY Files (*.sby);;All Files (*)"
+        )
+        if not sby_path:
+            return
+
+        self.bottom_panel.clear_console()
+        self.bottom_panel.tabs.setCurrentIndex(0)
+        self.bottom_panel.write_header(f"FORMAL VERIFICATION: {os.path.basename(sby_path)}")
+
+        write = self.bottom_panel.write_raw
+        self.status.showMessage("Running formal verification...")
+
+        try:
+            import subprocess, shutil
+
+            # Ensure boolector.exe is findable by yosys-smtbmc on PATH
+            py_scripts = os.path.join(os.path.dirname(sys.executable), "Scripts")
+            boolector_exe = os.path.join(py_scripts, "boolector.exe")
+            yowasp_boolector = os.path.join(py_scripts, "yowasp-boolector.exe")
+            if not os.path.isfile(boolector_exe) and os.path.isfile(yowasp_boolector):
+                shutil.copy2(yowasp_boolector, boolector_exe)
+
+            startupinfo = None
+            if os.name == "nt":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            write(f"sby -f {sby_path}\n\n")
+
+            result = subprocess.run(
+                ["yowasp-sby", "--yosys", "yowasp-yosys", "--smtbmc", "yowasp-yosys-smtbmc", "-f", sby_path],
+                capture_output=True, text=True, timeout=300,
+                startupinfo=startupinfo,
+            )
+
+            if result.stdout:
+                write(result.stdout)
+            if result.stderr:
+                write("[STDERR] " + result.stderr + "\n")
+
+            if result.returncode == 0:
+                self.bottom_panel.write_ok("Formal verification PASSED")
+                self.status.showMessage("Formal verification PASSED")
+                self.bottom_panel.append_history(f"Formal verification: {os.path.basename(sby_path)}")
+            else:
+                self.bottom_panel.write_error(f"Formal verification FAILED (exit code {result.returncode})")
+                self.status.showMessage("Formal verification FAILED")
+        except FileNotFoundError:
+            self.bottom_panel.write_error("yowasp-sby not found. Install: pip install yowasp-yosys")
+            self.status.showMessage("yowasp-sby not available")
+        except subprocess.TimeoutExpired:
+            self.bottom_panel.write_error("Formal verification timed out (300s)")
+            self.status.showMessage("Formal verification timed out")
+        except Exception as e:
+            self.bottom_panel.write_error(f"Formal verification error: {e}")
+            self.status.showMessage(f"Formal verification error: {e}")
+
     def _show_pnr_report(self, report_info):
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QTableWidget,
                                      QTableWidgetItem, QHeaderView,
@@ -1460,7 +1523,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(dlg)
 
         text = (
-            "<h2>HDLStudio</h2>"
+             "<h2>HDLStudio</h2>"
             "<p><b>Version:</b> 0.1.0</p>"
             "<p><b>Author:</b> José Pedro Granado Olmo (<a href='https://github.com/josped385'>@josped385</a>)</p>"
             "<p><b>Docs:</b> <a href='https://josped385.github.io/HDLStudio/'>josped385.github.io/HDLStudio</a></p>"
@@ -1472,8 +1535,11 @@ class MainWindow(QMainWindow):
             "<li>Icarus Verilog &amp; Verilator (WSL) compilation &amp; simulation</li>"
             "<li>GTKWave waveform viewer integration</li>"
             "<li>Yosys HDL synthesis</li>"
-            "<li>nextpnr-ice40 place &amp; route</li>"
+            "<li>Multi-FPGA place &amp; route: iCE40, ECP5, Nexus, MachXO2, Gowin</li>"
             "<li>Graphviz schematic viewer</li>"
+            "<li>Formal verification with SymbiYosys + Boolector (SMT)</li>"
+            "<li>Step debugger with VCD time-point navigation</li>"
+            "<li>Problems panel with clickable error markers</li>"
             "<li>Automatic testbench generation</li>"
             "<li>Extensible via plugins</li>"
             "</ul>"

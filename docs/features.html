@@ -45,7 +45,6 @@
       <li><span class="check">&#x2713;</span> Find and replace across all open files</li>
       <li><span class="check">&#x2713;</span> Configurable font family, size, tab width and word wrap</li>
       <li><span class="check">&#x2713;</span> Multiple tabs with unsaved-changes indicator</li>
-      <li><span class="check">&#x2713;</span> Error markers on compilation failure (clickable error links in console)</li>
     </ul>
 
     <h2>Project Management</h2>
@@ -83,10 +82,37 @@
 
     <h2>Place &amp; Route</h2>
     <ul class="feature-list">
-      <li><span class="check">&#x2713;</span> nextpnr-ice40 integration for Lattice iCE40 FPGAs (via <code>yowasp-nextpnr-ice40</code>)</li>
+      <li><span class="check">&#x2713;</span> Multi-FPGA family support: iCE40, ECP5, Nexus, MachXO2, Gowin</li>
+      <li><span class="check">&#x2713;</span> Per-family device/package/frequency selection dialog</li>
+      <li><span class="check">&#x2713;</span> Automatic bitstream packing (icepack, ecppack, gowin_pack)</li>
       <li><span class="check">&#x2713;</span> Automatic detection of last synthesis JSON output</li>
-      <li><span class="check">&#x2713;</span> Structured metrics dialog (logic cells, I/O, delay lines)</li>
+      <li><span class="check">&#x2713;</span> Structured metrics dialog (timing, resource usage)</li>
       <li><span class="check">&#x2713;</span> Full log capture and display</li>
+    </ul>
+
+    <h2>Formal Verification</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> SymbiYosys + Boolector SMT solver integration</li>
+      <li><span class="check">&#x2713;</span> Launch from Tools menu or <code>Ctrl+Shift+F</code></li>
+      <li><span class="check">&#x2713;</span> Full solver output displayed in console</li>
+      <li><span class="check">&#x2713;</span> PASSED/FAILED result status</li>
+    </ul>
+
+    <h2>Debugger</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Complete mode: compile, simulate, open GTKWave (F8)</li>
+      <li><span class="check">&#x2713;</span> Step-by-Time mode: navigate VCD time points</li>
+      <li><span class="check">&#x2713;</span> Step Forward (<code>Ctrl+Shift+Right</code>) / Back (<code>Ctrl+Shift+Left</code>)</li>
+      <li><span class="check">&#x2713;</span> Signal value table dock showing all signals at current time</li>
+      <li><span class="check">&#x2713;</span> Testbench <code>#delay</code> line highlighting in editor</li>
+    </ul>
+
+    <h2>Problems &amp; Error Navigation</h2>
+    <ul class="feature-list">
+      <li><span class="check">&#x2713;</span> Structured problems table (Type, File, Line, Message)</li>
+      <li><span class="check">&#x2713;</span> Click any problem row to navigate to source</li>
+      <li><span class="check">&#x2713;</span> Yellow error markers in editor gutter</li>
+      <li><span class="check">&#x2713;</span> Automatic error line highlighting on compilation failure</li>
     </ul>
 
     <h2>UI &amp; Customisation</h2>
