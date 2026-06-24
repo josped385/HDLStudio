@@ -100,14 +100,14 @@ class DebugDock(QDockWidget):
         )
         self._table.setStyleSheet(f"""
             QTableWidget {{
-                background-color: {colors['input_bg']};
-                color: {colors['text_primary']};
+                background-color: {colors['editor_bg']};
+                color: {colors['text']};
                 gridline-color: {colors['border']};
-                alternate-background-color: {colors['hover_bg']};
+                alternate-background-color: {colors['panel_hover']};
             }}
             QHeaderView::section {{
-                background-color: {colors['sidebar_bg']};
-                color: {colors['text_primary']};
+                background-color: {colors['panel_bg']};
+                color: {colors['text']};
                 border: 1px solid {colors['border']};
             }}
         """)

@@ -1408,7 +1408,6 @@ class MainWindow(QMainWindow):
             tab.editor.apply_theme_from_colors(colors)
 
         self._refresh_icons()
-
         self.status.showMessage(f"Switched to {new_theme} theme")
 
     def apply_settings(self, settings):
