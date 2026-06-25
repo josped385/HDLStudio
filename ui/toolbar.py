@@ -32,6 +32,11 @@ class MainToolBar(QToolBar):
 
         self.addSeparator()
 
+        self.addAction(a.undo)
+        self.addAction(a.redo)
+
+        self.addSeparator()
+
         self.addAction(a.compile)
         self.addAction(a.run)
         self.addAction(a.synthesize)

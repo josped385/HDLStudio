@@ -1548,7 +1548,7 @@ class MainWindow(QMainWindow):
 
         text = (
              "<h2>HDLStudio</h2>"
-            "<p><b>Version:</b> 0.1.0</p>"
+            "<p><b>Version:</b> 0.2.0</p>"
             "<p><b>Author:</b> José Pedro Granado Olmo (<a href='https://github.com/josped385'>@josped385</a>)</p>"
             "<p><b>Docs:</b> <a href='https://josped385.github.io/HDLStudio/'>josped385.github.io/HDLStudio</a></p>"
             "<p><b>License:</b> GPL v3</p>"

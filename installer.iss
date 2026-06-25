@@ -1,5 +1,5 @@
 #define MyAppName "HDLStudio"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "HDLStudio"
 #define MyAppExeName "HDLStudio.exe"
 

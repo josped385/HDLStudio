@@ -29,10 +29,10 @@ class IDEActions:
         self.save_as.setShortcut(QKeySequence("Ctrl+Shift+S"))
 
         # ---------------- EDIT ----------------
-        self.undo = QAction("Undo", main_window)
+        self.undo = QAction(QIcon(ThemeManager.icon("undo")), "Undo", main_window)
         self.undo.setShortcut(QKeySequence("Ctrl+Z"))
 
-        self.redo = QAction("Redo", main_window)
+        self.redo = QAction(QIcon(ThemeManager.icon("redo")), "Redo", main_window)
         self.redo.setShortcut(QKeySequence("Ctrl+Y"))
 
         # ---------------- BUILD ----------------
@@ -52,15 +52,15 @@ class IDEActions:
             "  • Step — advance through time points with testbench line highlighting"
         )
 
-        self.step_back = QAction("Step Back", main_window)
+        self.step_back = QAction(QIcon(ThemeManager.icon("backward")), "Step Back", main_window)
         self.step_back.setShortcut(QKeySequence("Ctrl+Shift+Left"))
         self.step_back.setToolTip("Step Back (Ctrl+Shift+Left)\nGo to previous time point")
 
-        self.step_forward = QAction("Step Forward", main_window)
+        self.step_forward = QAction(QIcon(ThemeManager.icon("forward")), "Step Forward", main_window)
         self.step_forward.setShortcut(QKeySequence("Ctrl+Shift+Right"))
         self.step_forward.setToolTip("Step Forward (Ctrl+Shift+Right)\nGo to next time point")
 
-        self.stop_debug = QAction("Stop Debug", main_window)
+        self.stop_debug = QAction(QIcon(ThemeManager.icon("stop")), "Stop Debug", main_window)
         self.stop_debug.setShortcut(QKeySequence("Shift+F5"))
         self.stop_debug.setToolTip("Stop Debug (Shift+F5)\nExit step debug mode and clear highlights")
 
@@ -92,7 +92,7 @@ class IDEActions:
         self.place_and_route.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
         # ---------------- THEME ----------------
-        self.toggle_theme = QAction("Toggle Dark/Light Theme", main_window)
+        self.toggle_theme = QAction(QIcon(ThemeManager.icon("darklight")), "Toggle Dark/Light Theme", main_window)
         self.toggle_theme.setShortcut(QKeySequence("Ctrl+Shift+T"))
         self.toggle_theme.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
 

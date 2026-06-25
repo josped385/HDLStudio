@@ -1,6 +1,6 @@
 # HDLStudio
 
-[![Download](https://img.shields.io/badge/Download-v0.1.0-brightgreen)](https://github.com/josped385/HDLStudio/releases/tag/v0.1.0)
+[![Download](https://img.shields.io/badge/Download-v0.2.0-brightgreen)](https://github.com/josped385/HDLStudio/releases/tag/v0.2.0)
 [![Docker](https://img.shields.io/badge/Docker-josped385/hdlstudio-2496ED?logo=docker)](https://hub.docker.com/r/josped385/hdlstudio)
 
 A modern IDE for digital hardware design with Verilog, SystemVerilog and VHDL support — 100% generated with AI.
@@ -45,9 +45,9 @@ To use Verilator as the simulation backend:
 
 ### Download the installer (recommended)
 
-Grab the latest release from the [Releases page](https://github.com/josped385/HDLStudio/releases/tag/v0.1.0):
+Grab the latest release from the [Releases page](https://github.com/josped385/HDLStudio/releases/tag/v0.2.0):
 
-- **`HDLStudio_Setup_v0.1.0.exe`** (~100 MB) — standalone installer, no external dependencies.
+- **`HDLStudio_Setup_v0.2.0.exe`** (~100 MB) — standalone installer, no external dependencies.
 
 Run the installer and launch HDLStudio from the Start Menu or desktop shortcut.
 
