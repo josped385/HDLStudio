@@ -51,7 +51,7 @@ class MainToolBar(QToolBar):
         self.module_combo.currentIndexChanged.connect(self._on_module_changed)
         self.addWidget(self.module_combo)
 
-        tb_label = QLabel("TB:")
+        tb_label = QLabel("Testbench:")
         tb_label.setStyleSheet("color: #aaaaaa; padding-left: 4px;")
         self.addWidget(tb_label)
 
@@ -62,7 +62,7 @@ class MainToolBar(QToolBar):
         self.tb_combo.currentIndexChanged.connect(self._on_tb_changed)
         self.addWidget(self.tb_combo)
 
-        sim_label = QLabel("Sim:")
+        sim_label = QLabel("Simulator:")
         sim_label.setStyleSheet("color: #aaaaaa; padding-left: 4px;")
         self.addWidget(sim_label)
 

@@ -2,7 +2,7 @@ import sys
 import os
 import re
 
-from PyQt6.QtCore import QSize, Qt, QEvent
+from PyQt6.QtCore import QSize, Qt, QEvent, QSettings
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QApplication, QDialog
 
@@ -63,6 +63,11 @@ class MainWindow(QMainWindow):
         self._refresh_icons()
         self.ext_manager.discover_and_load_all()
 
+        settings = QSettings("HDLStudio", "HDLStudio")
+        geo = settings.value("window/geometry")
+        if geo:
+            self.restoreGeometry(geo)
+
         QApplication.instance().installEventFilter(self)
 
     # ---------------- UI ----------------
@@ -97,6 +102,10 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.ide_actions.save)
         file_menu.addAction(self.ide_actions.save_as)
 
+        edit_menu = menu.addMenu("Edit")
+        edit_menu.addAction(self.ide_actions.undo)
+        edit_menu.addAction(self.ide_actions.redo)
+
         build_menu = menu.addMenu("Build")
         build_menu.addAction(self.ide_actions.compile)
         build_menu.addAction(self.ide_actions.run)
@@ -125,6 +134,18 @@ class MainWindow(QMainWindow):
         help_menu = menu.addMenu("Help")
         about_action = help_menu.addAction("About")
         about_action.triggered.connect(self._show_about)
+
+    # ---------------- EDIT ----------------
+
+    def _undo(self):
+        tab = self.editor_tabs.current_tab()
+        if tab and tab.editor:
+            tab.editor.undo()
+
+    def _redo(self):
+        tab = self.editor_tabs.current_tab()
+        if tab and tab.editor:
+            tab.editor.redo()
 
     # ---------------- EDITOR ----------------
 
@@ -576,6 +597,9 @@ class MainWindow(QMainWindow):
     # ---------------- CLOSE EVENT ----------------
 
     def closeEvent(self, event):
+
+        settings = QSettings("HDLStudio", "HDLStudio")
+        settings.setValue("window/geometry", self.saveGeometry())
 
         tabs = self.editor_tabs.tabs
 

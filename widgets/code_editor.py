@@ -303,6 +303,10 @@ class CodeEditor(QsciScintilla):
         self._hover_timer.setInterval(350)
         self._hover_timer.timeout.connect(self._on_hover_timeout)
         self._pending_hover_pos = None
+        self._fold_timer = QTimer(self)
+        self._fold_timer.setSingleShot(True)
+        self._fold_timer.setInterval(500)
+        self._fold_timer.timeout.connect(self._update_folds)
         self._setup_editor()
         self._setup_autocompletion()
 
@@ -384,8 +388,53 @@ class CodeEditor(QsciScintilla):
                 return
         super().keyPressEvent(event)
 
+    def setText(self, text):
+        super().setText(text)
+        self._update_folds()
+
     def set_hover_database(self, db):
         self._hover_db = db
+
+    def _setup_folding(self):
+        self.setFolding(QsciScintilla.FoldStyle.PlainFoldStyle, 2)
+        self.setFoldMarginColors(QColor("#333333"), QColor("#555555"))
+        self.textChanged.connect(self._on_text_changed)
+
+    def _on_text_changed(self):
+        self._fold_timer.start()
+
+    def _update_folds(self):
+        SCI_SETFOLDLEVEL = 2222
+        SC_FOLDLEVELBASE = 1024
+        SC_FOLDLEVELHEADERFLAG = 8192
+        SC_FOLDLEVELWHITEFLAG = 4096
+
+        nlines = self.lines()
+        if nlines == 0:
+            return
+
+        indent_of = []
+        for line in range(nlines):
+            txt = self.text(line)
+            if txt.strip():
+                indent_of.append(len(txt) - len(txt.lstrip()))
+            else:
+                indent_of.append(-1)
+
+        step = self.indentationWidth() or 1
+        for line in range(nlines):
+            if indent_of[line] < 0:
+                self.SendScintilla(SCI_SETFOLDLEVEL, line,
+                                   SC_FOLDLEVELWHITEFLAG | SC_FOLDLEVELBASE)
+                continue
+            look = line + 1
+            while look < nlines and indent_of[look] < 0:
+                look += 1
+            is_header = look < nlines and indent_of[look] > indent_of[line]
+            level = SC_FOLDLEVELBASE + indent_of[line] // step
+            if is_header:
+                level |= SC_FOLDLEVELHEADERFLAG
+            self.SendScintilla(SCI_SETFOLDLEVEL, line, level)
 
     def _word_at(self, vx, vy):
         word = self.wordAtPoint(QPoint(vx, vy))
@@ -500,6 +549,8 @@ class CodeEditor(QsciScintilla):
         self.setEdgeMode(QsciScintilla.EdgeMode.EdgeLine)
         self.setEdgeColumn(100)
         self.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
+
+        self._setup_folding()
 
         self._force_apply_theme()
 

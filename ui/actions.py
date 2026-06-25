@@ -28,6 +28,13 @@ class IDEActions:
         self.save_as = QAction(QIcon(ThemeManager.icon("save_as")), "Save As", main_window)
         self.save_as.setShortcut(QKeySequence("Ctrl+Shift+S"))
 
+        # ---------------- EDIT ----------------
+        self.undo = QAction("Undo", main_window)
+        self.undo.setShortcut(QKeySequence("Ctrl+Z"))
+
+        self.redo = QAction("Redo", main_window)
+        self.redo.setShortcut(QKeySequence("Ctrl+Y"))
+
         # ---------------- BUILD ----------------
 
         self.compile = QAction(QIcon(ThemeManager.icon("compile")), "Compile", main_window)
@@ -108,6 +115,9 @@ class IDEActions:
         self.step_forward.triggered.connect(self.main._step_forward)
         self.step_back.triggered.connect(self.main._step_back)
         self.stop_debug.triggered.connect(self.main._stop_debug)
+
+        self.undo.triggered.connect(self.main._undo)
+        self.redo.triggered.connect(self.main._redo)
 
         self.toggle_terminal.triggered.connect(self.main.toggle_terminal)
         self.toggle_explorer.triggered.connect(self.main.toggle_explorer)
